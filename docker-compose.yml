@@ -18,6 +18,8 @@ services:
 
   app:
     build: .
+    image: hackoct26-app:local
+    pull_policy: build
     restart: unless-stopped
     env_file:
       - .env
@@ -27,7 +29,7 @@ services:
       db:
         condition: service_healthy
     expose:
-      - "80"
+      - "8000"
 
   web:
     image: nginx:stable-alpine

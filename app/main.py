@@ -21,6 +21,7 @@ from app.api.v1.audit_log import router as audit_log_router
 from app.api.v1.feedback import router as feedback_router
 from app.config import settings
 from app.db.services import AuthService, ReminderService
+from app.db.schema_compat import ensure_schema_compat
 from app.db.session import async_session_maker, engine
 from app.tg_bot.keyboards import pay_keyboard
 from app.tg_bot.loader import bot, dp
@@ -67,8 +68,15 @@ async def run_reminders() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await wait_for_db()
+    # На случай, если образ/alembic на сервере отстают от моделей
+    await ensure_schema_compat(engine)
     async with async_session_maker() as db:
         await AuthService.ensure_system_admin(db)
+
+    if not settings.telegram_chat_id:
+        logger.warning(
+            "TELEGRAM_CHAT_ID не задан: напоминания в общий чат по ТЗ отключены"
+        )
 
     tz = ZoneInfo(settings.TIMEZONE)
     scheduler = AsyncIOScheduler(timezone=tz)

@@ -136,7 +136,13 @@ class ReminderService:
                 await db.rollback()
 
         delivered = 0
-        for r in await cls.collect(db):
+        # Личные напоминания — доп. канал; сбой не должен блокировать чат по ТЗ
+        try:
+            personal = await cls.collect(db)
+        except Exception:  # noqa: BLE001
+            logger.exception("Не удалось собрать личные напоминания")
+            personal = []
+        for r in personal:
             if not await cls._reserve(db, r.occurrence_id, r.user_id):
                 continue
             try:

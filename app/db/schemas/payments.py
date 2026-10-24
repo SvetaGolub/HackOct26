@@ -93,8 +93,7 @@ class OccurrenceUpdate(BaseModel):
     def _validate(self):
         if self.is_paid is None and self.paid_date is None:
             raise ValueError("Не указано ни одного поля для изменения")
-        if self.is_paid is None and self.paid_date is not None:
-            raise ValueError("Для указания даты оплаты передайте is_paid=true")
+        # paid_date без is_paid — исправление даты уже оплаченного периода (ТЗ)
         return self
 
 
