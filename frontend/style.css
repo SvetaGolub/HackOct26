@@ -1,0 +1,902 @@
+:root {
+  --bg-page: #f2f3f5;
+  --bg-card: #ffffff;
+  --bg-subtle: #f7f8fa;
+  --bg-input: #eceef2;
+  --border-color: #e0e3e8;
+  --text-main: #1d2129;
+  --text-muted: #707683;
+  --link-blue: #3090c7;
+  --accent-dark: #202630;
+}
+
+[data-theme="dark"] {
+  --bg-page: #121418;
+  --bg-card: #1b1e24;
+  --bg-subtle: #232730;
+  --bg-input: #282d37;
+  --border-color: #313744;
+  --text-main: #eaedf2;
+  --text-muted: #9aa1b0;
+  --link-blue: #52b0e8;
+  --accent-dark: #384357;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  font-size: 13px;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ШАПКА */
+.app-header {
+  min-height: 60px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  padding: 8px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header-left, .header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.header-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-color);
+}
+
+.system-subtitle {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* Итоги по 3 валютам в шапке */
+.currency-summary-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.summary-chip {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+.chip-label {
+  color: var(--text-muted);
+}
+
+.currency-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Кнопка изменения темы с жестко фиксированным размером */
+.theme-toggle-fixed {
+  width: 98px;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  cursor: pointer;
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.theme-circle {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ОСНОВНАЯ СЕТКА */
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 1fr 370px;
+  gap: 20px;
+  padding: 20px 24px;
+  max-width: 1700px;
+  width: 100%;
+  margin: 0 auto;
+  flex: 1;
+}
+
+.primary-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  display: block;
+}
+
+.sub-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.period-label {
+  margin-left: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.calendar-title-wrap {
+  display: flex;
+  align-items: baseline;
+}
+
+.calendar-arrows {
+  display: flex;
+  gap: 6px;
+}
+
+.arrow-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.arrow-btn:hover {
+  background: var(--bg-input);
+}
+
+/* Названия дней недели выше первой строки ячеек */
+.weekdays-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.weekday-label {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.weekday-label.weekend {
+  color: #c95b5b;
+}
+
+/* Ячейки календаря */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.calendar-cell {
+  position: relative;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  min-height: 96px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.calendar-cell:hover {
+  border-color: var(--link-blue);
+}
+
+.cell-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.tg-mini-tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--link-blue);
+  color: #fff;
+}
+
+.cell-date {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.cell-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: auto 0;
+}
+
+.dept-rect {
+  display: block;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dept-rect.approved {
+  background: #2e7d32;
+  color: #fff;
+}
+
+.dept-rect.rejected {
+  background: #c62828;
+  color: #fff;
+}
+
+.dept-rect.pending {
+  background: #e65100;
+  color: #fff;
+}
+
+/* Всплывающая подсказка со списком при наведении */
+.cell-hover-popover {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 40;
+  width: 250px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  padding: 10px;
+  margin-top: 4px;
+  pointer-events: none;
+}
+
+.calendar-cell:hover .cell-hover-popover {
+  display: block;
+}
+
+.popover-title {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 4px;
+}
+
+.popover-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.popover-item {
+  font-size: 11px;
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.popover-dept {
+  color: var(--link-blue);
+  font-weight: 500;
+}
+
+.popover-emp {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.popover-totals {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border-color);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.popover-hint {
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ТАБЛИЦА */
+.search-bar-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.field-input, .field-select {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  border-radius: 6px;
+  font-size: 13px;
+  width: 100%;
+  outline: none;
+}
+
+.field-select.compact {
+  width: auto;
+}
+
+.filter-panel {
+  background: var(--bg-subtle);
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.filter-grid label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th, .data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.data-table th {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+}
+
+.desc-main {
+  font-weight: 500;
+}
+
+.desc-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.overdue-tag {
+  background: #f8d7da;
+  color: #a7333f;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.ontime-tag {
+  background: #d4edda;
+  color: #256f36;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.status-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.status-select {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.status-select.approved {
+  background: #d4edda;
+  color: #256f36;
+}
+
+.status-select.rejected {
+  background: #f8d7da;
+  color: #a7333f;
+}
+
+.status-select.pending {
+  background: #e2e3e5;
+  color: #5a6268;
+}
+
+.actual-date-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tiny-label {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.date-inline-input {
+  height: 22px;
+  font-size: 11px;
+  padding: 0 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-subtle);
+  color: var(--text-main);
+}
+
+/* ПРАВАЯ КОЛОНКА — СПИСОК ПЛАТЕЖЕЙ КАК НА ФОТО */
+.journal-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 18px 14px;
+}
+
+.journal-heading {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  padding-left: 4px;
+}
+
+.journal-search-box {
+  background: var(--bg-input);
+  border-radius: 8px;
+  padding: 5px 6px 5px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.journal-search-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--text-main);
+  font-size: 14px;
+  width: 100%;
+}
+
+.journal-filter-btn {
+  background: #d5d7dc;
+  color: #555;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 16px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.journal-cards-container {
+  background: var(--bg-subtle);
+  border-radius: 14px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 620px;
+  overflow-y: auto;
+}
+
+.payment-card-item {
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.payment-card-item.approved {
+  background: linear-gradient(90deg, #e5f2e5 0%, #ffffff 85%);
+  color: #1d2129;
+}
+
+.payment-card-item.rejected {
+  background: linear-gradient(90deg, #fae6e8 0%, #ffffff 85%);
+  color: #1d2129;
+}
+
+.payment-card-item.pending {
+  background: linear-gradient(90deg, #e7e7e9 0%, #ffffff 85%);
+  color: #1d2129;
+}
+
+[data-theme="dark"] .payment-card-item.approved {
+  background: linear-gradient(90deg, #1b3320 0%, #22262e 90%);
+  color: #eaedf2;
+}
+
+[data-theme="dark"] .payment-card-item.rejected {
+  background: linear-gradient(90deg, #3a1e22 0%, #22262e 90%);
+  color: #eaedf2;
+}
+
+[data-theme="dark"] .payment-card-item.pending {
+  background: linear-gradient(90deg, #2d3038 0%, #22262e 90%);
+  color: #eaedf2;
+}
+
+.card-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.card-emp-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.card-dept-link {
+  font-size: 12px;
+  color: var(--link-blue);
+  text-align: right;
+}
+
+.card-item-desc {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.card-item-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.card-overdue-badge {
+  color: #b94a48;
+  font-weight: 600;
+}
+
+.card-item-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-status-pill {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.card-status-pill.approved {
+  background: #cdeec6;
+  color: #4b8b3b;
+}
+
+.card-status-pill.rejected {
+  background: #f8c8cb;
+  color: #b94a48;
+}
+
+.card-status-pill.pending {
+  background: #dcdde0;
+  color: #6c727f;
+}
+
+.card-amount-val {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* КНОПКИ И МОДАЛЬНОЕ ОКНО */
+.btn {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  background: var(--accent-dark);
+  color: #fff;
+}
+
+.btn-secondary {
+  background: var(--bg-subtle);
+  border-color: var(--border-color);
+  color: var(--text-main);
+}
+
+.btn-text {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-window {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  width: 520px;
+  padding: 20px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.sub-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.day-records-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.day-record-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-subtle);
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.day-record-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.btn-delete-record {
+  background: #f8d7da;
+  color: #a7333f;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.modal-divider {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 14px 0;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-field label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.empty-state, .empty-day-notice {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 14px;
+  font-size: 12px;
+}
+
+/* ПОДВАЛ (FOOTER) */
+.corporate-footer {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-color);
+  margin-top: 40px;
+}
+
+.footer-columns {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 36px 24px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.footer-col h4 {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.footer-col ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.footer-col a, .footer-text {
+  color: var(--text-main);
+  text-decoration: none;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.footer-bottom-bar {
+  background: #0d0e11;
+  color: #8c929e;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.footer-brand-keys {
+  display: flex;
+  gap: 4px;
+}
+
+.footer-brand-keys span {
+  background: #ffffff;
+  color: #0d0e11;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+  .footer-columns {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
