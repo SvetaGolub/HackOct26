@@ -21,12 +21,8 @@ class RecurringPaymentCreate(BaseModel):
     currency: Currency
     first_due_date: date = Field(..., description="Дата ближайшей оплаты")
     periodicity: Periodicity = Periodicity.MONTHLY
-<<<<<<< HEAD
-    department_id: int | None = Field(
-        default=None, description="Необязательный отдел; бухгалтер создаёт платёж в своём отделе"
-    )
-=======
->>>>>>> 7d3683a (пу пу пу)
+    department: str | None = Field(default=None, max_length=255)
+    employee: str | None = Field(default=None, max_length=255)
 
 
 class RecurringPaymentData(BaseModel):
@@ -38,10 +34,8 @@ class RecurringPaymentData(BaseModel):
     currency: Currency
     periodicity: Periodicity
     first_due_date: date
-<<<<<<< HEAD
-    department_id: int | None = None
-=======
->>>>>>> 7d3683a (пу пу пу)
+    department: str | None = None
+    employee: str | None = None
     is_active: bool
     deleted_at: datetime | None = None
     created_at: datetime
@@ -52,13 +46,11 @@ class OccurrenceData(BaseModel):
 
     id: int
     recurring_payment_id: int
-<<<<<<< HEAD
-    department_id: int | None = None
-=======
->>>>>>> 7d3683a (пу пу пу)
     title: str
     amount: Decimal
     currency: Currency
+    department: str | None = None
+    employee: str | None = None
     period: date
     due_date: date
     is_paid: bool
@@ -75,6 +67,8 @@ class OccurrenceData(BaseModel):
             title=occ.title,
             amount=occ.amount,
             currency=occ.currency,
+            department=occ.department,
+            employee=occ.employee,
             period=occ.period,
             due_date=occ.due_date,
             is_paid=occ.is_paid,
@@ -87,13 +81,8 @@ class OccurrenceData(BaseModel):
 class OccurrenceUpdate(BaseModel):
     """PATCH /payment-occurrences/{id}.
 
-<<<<<<< HEAD
-    - is_paid / paid_date: отметка оплаты и исправление фактической даты
-      (user, accountant, admin; срок при этом не меняется).
-=======
     is_paid / paid_date: отметка оплаты, её отмена и исправление фактической даты
     (user и admin; срок при этом не меняется).
->>>>>>> 7d3683a (пу пу пу)
     """
     model_config = {"extra": "forbid"}
 

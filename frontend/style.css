@@ -39,7 +39,6 @@ body {
   min-height: 100vh;
 }
 
-/* ШАПКА */
 .app-header {
   min-height: 60px;
   background: var(--bg-card);
@@ -62,6 +61,8 @@ body {
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.5px;
+  text-decoration: none;
+  color: var(--text-main);
 }
 
 .header-divider {
@@ -75,36 +76,16 @@ body {
   font-size: 13px;
 }
 
-/* Итоги по 3 валютам в шапке */
-.currency-summary-strip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.summary-chip {
+.role-badge {
   background: var(--bg-subtle);
   border: 1px solid var(--border-color);
+  padding: 3px 8px;
   border-radius: 6px;
-  padding: 4px 10px;
-  font-size: 12px;
-  display: flex;
-  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--link-blue);
 }
 
-.chip-label {
-  color: var(--text-muted);
-}
-
-.currency-selector {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* Кнопка изменения темы с жестко фиксированным размером */
 .theme-toggle-fixed {
   width: 98px;
   height: 32px;
@@ -131,10 +112,220 @@ body {
   flex-shrink: 0;
 }
 
-/* ОСНОВНАЯ СЕТКА */
+.account-dropdown-wrapper {
+  position: relative;
+}
+
+.account-trigger-btn {
+  height: 34px;
+  padding: 0 10px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 500;
+  transition: border-color 0.15s;
+}
+
+.account-trigger-btn:hover {
+  border-color: var(--link-blue);
+}
+
+.account-avatar-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-dark);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.account-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 250px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  padding: 8px;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.account-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 4px;
+}
+
+.account-dropdown-header .avatar-lg {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--link-blue);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.account-header-info {
+  overflow: hidden;
+}
+
+.account-role-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.account-email-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-item-btn {
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dropdown-item-btn:hover {
+  background: var(--bg-subtle);
+}
+
+.dropdown-item-btn.danger {
+  color: #c62828;
+  border-top: 1px solid var(--border-color);
+  margin-top: 4px;
+  padding-top: 10px;
+  border-radius: 0 0 6px 6px;
+}
+
+.dropdown-item-btn.danger:hover {
+  background: rgba(198, 40, 40, 0.08);
+}
+
+.accounts-count-pill {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.auth-page-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 28px 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.auth-card-header {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.auth-card-header .brand-logo {
+  font-size: 26px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.budget-plan-widget {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 12px;
+}
+
+.budget-item {
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+}
+
+.budget-label {
+  color: var(--text-muted);
+}
+
+.budget-val {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+.budget-currency-select {
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-main);
+  border-radius: 6px;
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+}
+
+.budget-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-color);
+}
+
 .dashboard-layout {
   display: grid;
-  grid-template-columns: 1fr 370px;
+  grid-template-columns: 1fr 380px;
   gap: 20px;
   padding: 20px 24px;
   max-width: 1700px;
@@ -206,7 +397,6 @@ body {
   background: var(--bg-input);
 }
 
-/* Названия дней недели выше первой строки ячеек */
 .weekdays-row {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -226,7 +416,6 @@ body {
   color: #c95b5b;
 }
 
-/* Ячейки календаря */
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -307,7 +496,6 @@ body {
   color: #fff;
 }
 
-/* Всплывающая подсказка со списком при наведении */
 .cell-hover-popover {
   display: none;
   position: absolute;
@@ -376,7 +564,6 @@ body {
   color: var(--text-muted);
 }
 
-/* ТАБЛИЦА */
 .search-bar-row {
   display: flex;
   gap: 8px;
@@ -450,6 +637,16 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
+}
+
+.created-date-tag {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
 }
 
 .overdue-tag {
@@ -491,8 +688,8 @@ body {
 }
 
 .status-select.rejected {
-  background: #f8d7da;
-  color: #a7333f;
+  background: #f8c8cb;
+  color: #b94a48;
 }
 
 .status-select.pending {
@@ -521,7 +718,111 @@ body {
   color: var(--text-main);
 }
 
-/* ПРАВАЯ КОЛОНКА — СПИСОК ПЛАТЕЖЕЙ КАК НА ФОТО */
+/* Фактическая оплата - выпадающий прямоугольник */
+.actual-payment-dropdown-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.actual-payment-trigger {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.actual-payment-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 210px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  padding: 10px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.actual-payment-dropdown label {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* Стили для элементов модального окна (Записи на дату) */
+.day-record-item-card {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+/* Салатовый (оплачено) */
+.day-record-item-card.approved {
+  background: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+/* Оранжево-желтый (в ожидании) */
+.day-record-item-card.pending {
+  background: #fff3cd;
+  border-color: #ffeeba;
+  color: #856404;
+}
+
+/* Красный (просрочено / отказано) */
+.day-record-item-card.rejected {
+  background: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+/* Серий (удаленный для админа) */
+.day-record-item-card.deleted-gray {
+  background: #e2e3e5;
+  border-color: #d6d8db;
+  color: #6c757d;
+  opacity: 0.85;
+}
+
+[data-theme="dark"] .day-record-item-card.approved {
+  background: #1b3320;
+  border-color: #274d2f;
+  color: #d4edda;
+}
+
+[data-theme="dark"] .day-record-item-card.pending {
+  background: #3b3318;
+  border-color: #524720;
+  color: #fff3cd;
+}
+
+[data-theme="dark"] .day-record-item-card.rejected {
+  background: #3a1e22;
+  border-color: #52292f;
+  color: #f8d7da;
+}
+
+[data-theme="dark"] .day-record-item-card.deleted-gray {
+  background: #282d37;
+  border-color: #384357;
+  color: #9aa1b0;
+}
+
+/* ИСТОРИЯ ПЛАТЕЖЕЙ */
 .journal-panel {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -532,8 +833,15 @@ body {
 .journal-heading {
   font-size: 18px;
   font-weight: 500;
-  margin-bottom: 12px;
+  margin-bottom: 4px;
   padding-left: 4px;
+}
+
+.journal-subheading {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-left: 4px;
+  margin-bottom: 12px;
 }
 
 .journal-search-box {
@@ -544,6 +852,7 @@ body {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 14px;
+  position: relative;
 }
 
 .journal-search-box input {
@@ -555,15 +864,56 @@ body {
   width: 100%;
 }
 
+.journal-filter-wrapper {
+  position: relative;
+}
+
 .journal-filter-btn {
   background: #d5d7dc;
   color: #555;
   border: none;
   border-radius: 6px;
-  padding: 5px 16px;
+  padding: 5px 12px;
   font-size: 12px;
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.journal-filter-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 200px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 6px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filter-dropdown-item {
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 12px;
+  text-align: left;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.filter-dropdown-item:hover {
+  background: var(--bg-subtle);
+}
+
+.filter-dropdown-item.active {
+  font-weight: 600;
+  color: var(--link-blue);
 }
 
 .journal-cards-container {
@@ -572,14 +922,14 @@ body {
   padding: 12px 10px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   max-height: 620px;
   overflow-y: auto;
 }
 
 .payment-card-item {
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
@@ -597,8 +947,13 @@ body {
 }
 
 .payment-card-item.pending {
-  background: linear-gradient(90deg, #e7e7e9 0%, #ffffff 85%);
+  background: linear-gradient(90deg, #fef9e7 0%, #ffffff 85%);
   color: #1d2129;
+}
+
+.payment-card-item.deleted-gray {
+  background: linear-gradient(90deg, #e2e3e5 0%, #ffffff 85%);
+  color: #6c757d;
 }
 
 [data-theme="dark"] .payment-card-item.approved {
@@ -612,8 +967,13 @@ body {
 }
 
 [data-theme="dark"] .payment-card-item.pending {
-  background: linear-gradient(90deg, #2d3038 0%, #22262e 90%);
+  background: linear-gradient(90deg, #3b3318 0%, #22262e 90%);
   color: #eaedf2;
+}
+
+[data-theme="dark"] .payment-card-item.deleted-gray {
+  background: linear-gradient(90deg, #282d37 0%, #22262e 90%);
+  color: #9aa1b0;
 }
 
 .card-item-top {
@@ -624,46 +984,55 @@ body {
 }
 
 .card-emp-name {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .card-dept-link {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--link-blue);
   text-align: right;
 }
 
 .card-item-desc {
   font-size: 12px;
-  opacity: 0.85;
+  font-weight: 500;
+}
+
+.history-change-detail {
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.04);
+  padding: 5px 8px;
+  border-radius: 6px;
+  border-left: 3px solid var(--link-blue);
+}
+
+[data-theme="dark"] .history-change-detail {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .card-item-meta {
   font-size: 11px;
   color: var(--text-muted);
   display: flex;
+  justify-content: space-between;
   gap: 10px;
   align-items: center;
-  margin-bottom: 4px;
-}
-
-.card-overdue-badge {
-  color: #b94a48;
-  font-weight: 600;
+  margin-top: 2px;
 }
 
 .card-item-bottom {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: 2px;
 }
 
 .card-status-pill {
-  padding: 4px 12px;
+  padding: 3px 10px;
   border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .card-status-pill.approved {
@@ -677,16 +1046,15 @@ body {
 }
 
 .card-status-pill.pending {
-  background: #dcdde0;
-  color: #6c727f;
+  background: #ffeeba;
+  color: #856404;
 }
 
 .card-amount-val {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
-/* КНОПКИ И МОДАЛЬНОЕ ОКНО */
 .btn {
   height: 32px;
   padding: 0 14px;
@@ -695,6 +1063,9 @@ body {
   font-weight: 500;
   cursor: pointer;
   border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-primary {
@@ -720,7 +1091,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 150;
 }
 
 .modal-window {
@@ -728,7 +1099,12 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 10px;
   width: 520px;
+  max-width: 95vw;
   padding: 20px;
+}
+
+.modal-window.compact-modal {
+  width: 380px;
 }
 
 .modal-header {
@@ -758,23 +1134,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 150px;
+  max-height: 180px;
   overflow-y: auto;
-}
-
-.day-record-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--bg-subtle);
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-}
-
-.day-record-sub {
-  font-size: 11px;
-  color: var(--text-muted);
 }
 
 .btn-delete-record {
@@ -832,7 +1193,6 @@ body {
   font-size: 12px;
 }
 
-/* ПОДВАЛ (FOOTER) */
 .corporate-footer {
   background: var(--bg-card);
   border-top: 1px solid var(--border-color);
@@ -900,3 +1260,149 @@ body {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ===== Заголовок «Добавить регулярный платеж» — голубой ===== */
+.sub-label.sub-label-blue {
+  color: #2f9be0;
+  background: rgba(64, 169, 255, 0.14);
+  border: 1px solid rgba(64, 169, 255, 0.45);
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+/* ===== Отдел: выбор + салатовый квадрат с плюсом ===== */
+.dept-row {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+.dept-row .field-input { flex: 1; min-width: 0; }
+.dept-picker { position: relative; flex: 1; min-width: 0; }
+.dept-picker-btn {
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-main);
+  font-size: 12px;
+  cursor: pointer;
+}
+.dept-caret { font-size: 9px; opacity: 0.6; }
+.dept-menu {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dept-menu-item {
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  color: var(--text-main);
+  cursor: pointer;
+}
+.dept-menu-item:hover, .dept-menu-item.active { background: var(--bg-subtle); }
+.dept-menu-item.active { font-weight: 600; }
+.dept-delete-rect {
+  margin-top: 4px;
+  background: #f8d7da;
+  color: #a7333f;
+  border: 1px solid #efb4ba;
+  border-radius: 5px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dept-delete-rect:hover { background: #f3c2c7; }
+.dept-add-square {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: #8fd14f; /* салатовый */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.dept-add-square:hover { background: #7cc23a; }
+
+/* ===== Кнопки в шапке ===== */
+.btn-feedback {
+  background: var(--bg-subtle);
+  border-color: var(--border-color);
+  color: var(--text-main);
+}
+.btn-telegram {
+  gap: 6px;
+  background: #2aabee;
+  color: #fff;
+}
+.btn-telegram:hover { background: #1c98d9; }
+.btn-telegram.linked { background: #2e9d63; }
+.btn-delete-tg {
+  background: #f8d7da;
+  color: #a7333f;
+  margin-right: auto;
+}
+
+/* ===== Обратная связь / Telegram ===== */
+.feedback-textarea {
+  height: 70px;
+  padding: 8px 10px;
+  resize: vertical;
+  font-family: inherit;
+}
+.amount-currency-row {
+  display: grid;
+  grid-template-columns: 1fr 96px;
+  gap: 6px;
+}
+.tg-linked-note {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(46, 157, 99, 0.14);
+  color: #2e9d63;
+}
+
+
+/* ===== Логотип aeza (изображение) ===== */
+.brand-logo { display: inline-flex; align-items: center; line-height: 0; }
+.brand-logo-img { height: 24px; width: auto; display: block; border-radius: 5px; }
+.auth-card-header .brand-logo-img { height: 34px; margin-bottom: 6px; }
+.footer-logo-img { height: 22px; width: auto; display: block; border-radius: 4px; }
+
+
+/* ===== Логотип под тему: светлая — на белом фоне, тёмная — на чёрном ===== */
+.logo-for-dark { display: none !important; }
+[data-theme="dark"] .logo-for-light { display: none !important; }
+[data-theme="dark"] .logo-for-dark { display: block !important; }
+.logo-for-light { border-radius: 0; }
+
+/* ===== Карточка авторизации: логотип строго по центру внутри прямоугольника ===== */
+.auth-card-header { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.auth-card-header .brand-logo { display: flex; justify-content: center; align-items: center; width: 100%; margin: 0 0 8px; }
+.auth-card-header .brand-logo-img { height: 34px; margin: 0 auto; }
+.auth-card-header .system-subtitle { width: 100%; text-align: center; }
+/* Нижний (футерный) логотип — всегда чёрный, от темы не зависит */
+.footer-logo-img { display: block !important; }

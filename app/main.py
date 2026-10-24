@@ -18,6 +18,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.payments import router as payments_router
 from app.api.v1.users import router as users_router
 from app.api.v1.audit_log import router as audit_log_router
+from app.api.v1.feedback import router as feedback_router
 from app.config import settings
 from app.db.services import AuthService, ReminderService
 from app.db.session import async_session_maker, engine
@@ -108,7 +109,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for r in (auth_router, payments_router, users_router, audit_log_router):
+for r in (auth_router, payments_router, users_router, audit_log_router, feedback_router):
     app.include_router(r, prefix="/api/v1")
 
 

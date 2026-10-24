@@ -63,6 +63,8 @@ async def ensure_occurrences(db: AsyncSession, rp: RecurringPayment, today: date
             title=rp.title,
             amount=rp.amount,
             currency=rp.currency,
+            department=rp.department,
+            employee=rp.employee,
             period=period,
             due_date=due,
         ))

@@ -66,26 +66,13 @@ class ReminderService:
                 select(ReminderLog).where(ReminderLog.occurrence_id.in_([o.id for o in occs]))
             )).scalars().all()
         }
-<<<<<<< HEAD
-        department_ids = {o.department_id for o in occs if o.department_id is not None}
-        users_stmt = select(User).where(User.telegram_id.is_not(None))
-        if department_ids and not any(o.department_id is None for o in occs):
-            users_stmt = users_stmt.where(User.department_id.in_(department_ids))
-        users = (await db.execute(users_stmt)).scalars().all()
-=======
         users = (await db.execute(select(User).where(User.telegram_id.is_not(None)))).scalars().all()
->>>>>>> 7d3683a (пу пу пу)
 
         return [
             Reminder(occ.id, u.id, u.telegram_id, format_message(occ))
             for occ in occs
             for u in users
-<<<<<<< HEAD
-            if (occ.department_id is None or occ.department_id == u.department_id)
-            and (occ.id, u.id) not in sent
-=======
             if (occ.id, u.id) not in sent
->>>>>>> 7d3683a (пу пу пу)
         ]
 
     @classmethod

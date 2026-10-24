@@ -14,15 +14,32 @@ function startOfCurrentWeek() {
   return date;
 }
 
-function invoiceKeeperApp() {
-  const today = isoDate(new Date());
-
+function invoiceKeeperApp(pageRole = 'admin') {
   return {
+    pageRole,
     theme: localStorage.getItem('app-theme') || 'light',
-    defaultCurrency: 'RUB',
     weekdays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-    departments: [],
-    referenceTodayISO: today,
+    departments: ['Без отдела'],
+    newDeptName: '',
+    showAddDeptInput: false,
+    isDeptMenuOpen: false,
+    isFeedbackModalOpen: false,
+    feedbackForm: {
+      employee: '',
+      department: '',
+      request: '',
+      amount: '',
+      currency: 'RUB',
+      dueDate: '',
+      periodicity: 'monthly'
+    },
+    isTelegramModalOpen: false,
+    telegramForm: { login: '', code: '' },
+    telegramLinkDetails: null,
+    planCurrency: 'RUB',
+    recurringPayments: [],
+    paymentSummary: [],
+    referenceTodayISO: isoDate(new Date()),
     startMonday: startOfCurrentWeek(),
     tableSearch: '',
     tableDeptFilter: '',
@@ -31,30 +48,56 @@ function invoiceKeeperApp() {
     showTableFilter: false,
     journalSearch: '',
     journalStatusFilter: '',
+    isHistoryFilterOpen: false,
     isModalOpen: false,
-    selectedDateISO: today,
+    selectedDateISO: isoDate(new Date()),
     newRec: {
       description: '',
-      department: '',
+      department: 'Без отдела',
+      employee: '',
       amount: '',
       currency: 'RUB',
       periodicity: 'monthly',
       status: 'В ожидании',
       paidAt: ''
     },
-    records: [],
-    authToken: localStorage.getItem('invoice-keeper-token') || '',
+    isAccountMenuOpen: false,
+    isAddAccountModalOpen: false,
+    addAccForm: { login: '', password: '' },
+    loginForm: { login: '', password: '' },
+    accounts: [],
     currentUser: null,
-    departmentsById: {},
-    departmentIdsByName: {},
-    periodicityByRecurringId: {},
+    records: [],
+    paymentHistory: [],
+    authToken: localStorage.getItem('invoice-keeper-token') || '',
 
-    get canManageRecurring() {
-      return ['admin', 'accountant'].includes(this.currentUser?.role);
+    get currentAccount() {
+      if (!this.currentUser) return {};
+      return {
+        ...this.currentUser,
+        email: this.currentUser.login,
+        label: this.currentUser.role === 'admin' ? 'Администратор' : 'Пользователь'
+      };
     },
 
     get isAdmin() {
       return this.currentUser?.role === 'admin';
+    },
+
+    get telegramLinked() {
+      return Boolean(this.currentUser?.telegram_id);
+    },
+
+    get telegramLogin() {
+      return this.currentUser?.telegram_id ? String(this.currentUser.telegram_id) : '';
+    },
+
+    get currentMonthPlan() {
+      return this.formatMoney(this.plannedAmount(new Date().getFullYear(), new Date().getMonth()), this.planCurrency);
+    },
+
+    get currentYearPlan() {
+      return this.formatMoney(this.plannedAmount(new Date().getFullYear()), this.planCurrency);
     },
 
     get periodLabel() {
@@ -92,15 +135,25 @@ function invoiceKeeperApp() {
       });
     },
 
-    get filteredJournalRecords() {
+    get filteredHistoryRecords() {
+      const entries = this.isAdmin
+        ? this.paymentHistory
+        : this.records.map(record => ({
+          ...record,
+          action: record.status === 'Одобрено' ? 'Платёж оплачен' : 'Ожидает оплаты',
+          timestamp: `Срок: ${this.formatReadableDate(record.dueDate)}`,
+          actor: ''
+        }));
       const query = this.journalSearch.toLocaleLowerCase().trim();
-      return this.records.filter(record => {
+      return entries.filter(item => {
         const matchesQuery = !query || [
-          record.description,
-          record.department,
-          record.employee
-        ].some(value => String(value).toLocaleLowerCase().includes(query));
-        return matchesQuery && (!this.journalStatusFilter || record.status === this.journalStatusFilter);
+          item.description,
+          item.department,
+          item.employee,
+          item.action,
+          item.actor
+        ].some(value => String(value || '').toLocaleLowerCase().includes(query));
+        return matchesQuery && (!this.journalStatusFilter || item.status === this.journalStatusFilter);
       });
     },
 
@@ -138,34 +191,6 @@ function invoiceKeeperApp() {
       return result;
     },
 
-    async login() {
-      const email = window.prompt('Введите email для входа в Invoice Keeper:');
-      if (!email) return false;
-      const password = window.prompt('Введите пароль:');
-      if (!password) return false;
-
-      const result = await this.apiRequest('/auth/login', 'POST', { email, password });
-      if (!result?.accessToken) throw new Error('API не вернул токен авторизации.');
-      this.authToken = result.accessToken;
-      localStorage.setItem('invoice-keeper-token', this.authToken);
-      this.currentUser = result.user;
-      return true;
-    },
-
-    async ensureAuthenticated() {
-      if (this.authToken) {
-        try {
-          this.currentUser = await this.apiRequest('/auth/me');
-          return true;
-        } catch (error) {
-          if (error.status !== 401) throw error;
-          this.authToken = '';
-          localStorage.removeItem('invoice-keeper-token');
-        }
-      }
-      return this.login();
-    },
-
     async fetchAll(path) {
       const items = [];
       const pageSize = 500;
@@ -181,54 +206,197 @@ function invoiceKeeperApp() {
       return items;
     },
 
-    mapOccurrence(item) {
-      const periodicity = this.periodicityByRecurringId[item.recurring_payment_id];
-      const department = item.department?.name
-        || this.departmentsById[item.department_id]
-        || `Отдел ${item.department_id}`;
+    async init() {
+      if (this.pageRole === 'auth') {
+        if (!this.authToken) return;
+        try {
+          this.currentUser = await this.apiRequest('/auth/me');
+          this.navigateToRole();
+        } catch (error) {
+          if (error.status === 401) {
+            this.clearSession();
+            return;
+          }
+          this.showError(error);
+        }
+        return;
+      }
+
+      if (!this.authToken) {
+        window.location.replace('auth.html');
+        return;
+      }
+      try {
+        this.currentUser = await this.apiRequest('/auth/me');
+        if (this.currentUser.role !== this.pageRole) {
+          this.navigateToRole();
+          return;
+        }
+        await this.loadFromBackend();
+      } catch (error) {
+        if (error.status === 401) {
+          this.clearSession();
+          window.location.replace('auth.html');
+          return;
+        }
+        this.showError(error);
+      }
+    },
+
+    navigateToRole() {
+      if (!this.currentUser) return;
+      const page = this.currentUser.role === 'admin' ? 'admin.html' : 'user.html';
+      if (this.pageRole !== 'auth' && window.location.pathname.endsWith(page)) return;
+      window.location.replace(page);
+    },
+
+    async loadFromBackend() {
+      const requests = [
+        this.fetchAll('/recurring-payments?include_inactive=true'),
+        this.fetchAll('/payment-occurrences'),
+        this.apiRequest('/payments/summary')
+      ];
+      if (this.isAdmin) {
+        requests.push(this.fetchAll('/audit-log'));
+        requests.push(this.fetchAll('/users'));
+      }
+      const [recurringPayments, occurrences, summary, history, users] = await Promise.all(requests);
+      this.recurringPayments = recurringPayments;
+      this.paymentSummary = summary;
+      const recurringById = Object.fromEntries(recurringPayments.map(item => [item.id, item]));
+      this.records = occurrences.map(item => this.mapOccurrence(item, recurringById));
+      this.paymentHistory = (history || []).map(item => this.mapAuditEntry(item));
+      this.accounts = users || [this.currentUser];
+      this.departments = ['Без отдела', ...new Set([
+        ...this.records.map(item => item.department),
+        ...recurringPayments.map(item => item.department)
+      ].filter(item => item && item !== '—' && item !== 'Без отдела'))];
+      if (!this.departments.includes(this.newRec.department)) this.newRec.department = this.departments[0];
+      if (!this.newRec.department && this.departments.length) {
+        this.newRec.department = this.departments[0];
+      }
+    },
+
+    mapOccurrence(item, recurringById) {
+      const recurring = recurringById[item.recurring_payment_id];
+      const status = item.is_paid ? 'Одобрено' : item.overdue ? 'Отказано' : 'В ожидании';
       return {
         id: item.id,
         recurringId: item.recurring_payment_id,
         dueDate: item.due_date,
         paidAt: item.paid_date || '',
-        employee: 'Не указан',
-        department,
+        employee: item.employee || recurring?.employee || '—',
+        department: item.department || recurring?.department || 'Без отдела',
         description: item.title,
         amount: Number(item.amount),
         currency: item.currency,
-        periodicity: periodicity === 'one_time' ? 'Разовый' : 'Ежемесячно',
-        status: item.is_paid ? 'Одобрено' : 'В ожидании',
-        isOverdue: Boolean(item.overdue)
+        periodicity: recurring?.periodicity === 'one_time' ? 'Разовый' : 'Ежемесячно',
+        status,
+        isOverdue: Boolean(item.overdue),
+        isPaid: Boolean(item.is_paid),
+        isDeleted: recurring ? !recurring.is_active : false
       };
     },
 
-    async loadFromBackend() {
-      const [departments, recurringPayments, occurrences] = await Promise.all([
-        this.apiRequest('/departments'),
-        this.fetchAll('/recurring-payments?include_inactive=true'),
-        this.fetchAll('/payment-occurrences')
-      ]);
-      if (!Array.isArray(departments)) throw new Error('API вернул неожиданный формат списка отделов.');
-
-      this.departmentsById = Object.fromEntries(departments.map(item => [item.id, item.name]));
-      this.departmentIdsByName = Object.fromEntries(departments.map(item => [item.name, item.id]));
-      this.departments = departments.map(item => item.name);
-      this.periodicityByRecurringId = Object.fromEntries(
-        recurringPayments.map(item => [item.id, item.periodicity])
-      );
-      if (!this.newRec.department && this.departments.length) {
-        this.newRec.department = this.departments[0];
-      }
-      this.records = occurrences.map(item => this.mapOccurrence(item));
+    mapAuditEntry(item) {
+      const oldValue = item.old_value || {};
+      const newValue = item.new_value || {};
+      const value = { ...oldValue, ...newValue };
+      const isPaid = value.is_paid ?? value.status === 'paid';
+      const isOverdue = value.overdue === true;
+      return {
+        id: item.id,
+        timestamp: new Date(item.created_at).toLocaleString('ru-RU'),
+        action: item.action,
+        employee: value.employee || '—',
+        actor: item.actor_login || '—',
+        department: value.department || '—',
+        description: value.request || value.title || `${item.entity_type} #${item.entity_id}`,
+        amount: Number(value.amount || 0),
+        currency: value.currency || 'RUB',
+        status: item.entity_type === 'feedback'
+          ? 'В ожидании'
+          : isPaid ? 'Одобрено' : isOverdue ? 'Отказано' : 'В ожидании'
+      };
     },
 
-    async init() {
+    plannedAmount(year, month = null) {
+      return this.recurringPayments
+        .filter(item => item.is_active && item.currency === this.planCurrency)
+        .reduce((total, item) => {
+          if (item.periodicity === 'monthly') {
+            return total + Number(item.amount) * (month === null ? 12 : 1);
+          }
+          const dueDate = new Date(`${item.first_due_date}T00:00:00`);
+          return dueDate.getFullYear() === year && (month === null || dueDate.getMonth() === month)
+            ? total + Number(item.amount)
+            : total;
+        }, 0);
+    },
+
+    async submitLoginPage() {
+      const login = this.loginForm.login.trim();
+      const password = this.loginForm.password;
+      if (!login || !password) return;
       try {
-        if (await this.ensureAuthenticated()) await this.loadFromBackend();
+        const result = await this.apiRequest('/auth/login', 'POST', { login, password });
+        if (!result?.accessToken || !result.user) throw new Error('API вернул неполный ответ авторизации.');
+        this.authToken = result.accessToken;
+        this.currentUser = result.user;
+        localStorage.setItem('invoice-keeper-token', this.authToken);
+        this.navigateToRole();
       } catch (error) {
-        console.error('Не удалось загрузить данные Invoice Keeper:', error);
-        window.alert(error.message);
+        this.showError(error);
       }
+    },
+
+    openAddAccountModal() {
+      if (!this.isAdmin) return;
+      this.isAccountMenuOpen = false;
+      this.addAccForm.login = '';
+      this.addAccForm.password = '';
+      this.isAddAccountModalOpen = true;
+    },
+
+    async submitAddAccount() {
+      if (!this.isAdmin) return;
+      try {
+        await this.apiRequest('/users', 'POST', {
+          login: this.addAccForm.login.trim(),
+          password: this.addAccForm.password
+        });
+        this.isAddAccountModalOpen = false;
+        await this.loadFromBackend();
+      } catch (error) {
+        this.showError(error);
+      }
+    },
+
+    switchAccount() {
+      window.alert('Для смены пользователя выйдите из аккаунта и войдите под другой учётной записью.');
+    },
+
+    async logoutAccount() {
+      this.isAccountMenuOpen = false;
+      try {
+        if (this.authToken) await this.apiRequest('/auth/logout', 'POST');
+      } catch (error) {
+        this.showError(error);
+      } finally {
+        this.clearSession();
+        window.location.replace('auth.html');
+      }
+    },
+
+    clearSession() {
+      this.authToken = '';
+      this.currentUser = null;
+      localStorage.removeItem('invoice-keeper-token');
+    },
+
+    showError(error) {
+      console.error('Ошибка Invoice Keeper:', error);
+      window.alert(error.message || 'Не удалось выполнить запрос.');
     },
 
     toggleTheme() {
@@ -247,9 +415,8 @@ function invoiceKeeperApp() {
     },
 
     isOverdue(item) {
-      return item.paidAt
-        ? item.paidAt > item.dueDate
-        : this.referenceTodayISO > item.dueDate;
+      return Boolean(item.isOverdue)
+        || (item.paidAt ? item.paidAt > item.dueDate : this.referenceTodayISO > item.dueDate);
     },
 
     hasTelegramReminderSoon(date) {
@@ -257,50 +424,41 @@ function invoiceKeeperApp() {
         (new Date(`${date}T00:00:00`) - new Date(`${this.referenceTodayISO}T00:00:00`)) / 86400000
       );
       return daysUntilDue >= 0 && daysUntilDue <= 3
-        && this.getRecordsByDate(date).some(record => record.status !== 'Одобрено');
+        && this.getRecordsByDate(date).some(record => !record.isPaid);
     },
 
     async onStatusChange(item) {
       if (item.status === 'Отказано') {
-        item.status = 'В ожидании';
-        window.alert('API хранит только состояния «Оплачено» и «Не оплачено». Просрочка рассчитывается автоматически.');
+        item.status = item.isPaid ? 'Одобрено' : 'В ожидании';
+        window.alert('Просрочка рассчитывается автоматически. API позволяет отметить платёж оплаченным или неоплаченным.');
+        return;
       }
-      if (item.status === 'Одобрено' && !item.paidAt) {
-        item.paidAt = item.dueDate <= this.referenceTodayISO ? item.dueDate : this.referenceTodayISO;
-      } else if (item.status !== 'Одобрено') {
-        item.paidAt = '';
-      }
-      await this.syncOccurrenceWithDb(item);
+      const isPaid = item.status === 'Одобрено';
+      await this.updateOccurrence(item, isPaid
+        ? { is_paid: true, paid_date: item.paidAt || this.referenceTodayISO }
+        : { is_paid: false });
     },
 
     async onActualDateChange(item) {
-      item.status = item.paidAt ? 'Одобрено' : 'В ожидании';
-      await this.syncOccurrenceWithDb(item);
+      await this.updateOccurrence(item, item.paidAt
+        ? { is_paid: true, paid_date: item.paidAt }
+        : { is_paid: false });
     },
 
-    async syncOccurrenceWithDb(item) {
+    async updateOccurrence(item, payload) {
       try {
-        const body = item.paidAt
-          ? { is_paid: true, paid_date: item.paidAt }
-          : { is_paid: false };
-        const result = await this.apiRequest(`/payment-occurrences/${item.id}`, 'PATCH', body);
-        Object.assign(item, this.mapOccurrence(result));
+        const result = await this.apiRequest(`/payment-occurrences/${item.id}`, 'PATCH', payload);
+        const recurringById = Object.fromEntries(this.recurringPayments.map(record => [record.id, record]));
+        Object.assign(item, this.mapOccurrence(result, recurringById));
+        await this.loadSummary();
       } catch (error) {
-        console.error('Не удалось обновить статус платежа:', error);
-        window.alert(error.message);
-        try {
-          await this.loadFromBackend();
-        } catch (reloadError) {
-          console.error('Не удалось обновить данные после ошибки:', reloadError);
-          window.alert(reloadError.message);
-        }
+        this.showError(error);
+        await this.loadFromBackend();
       }
     },
 
-    summaryByCurrency(currency) {
-      return this.records
-        .filter(record => record.currency === currency)
-        .reduce((sum, record) => sum + Number(record.amount || 0), 0);
+    async loadSummary() {
+      this.paymentSummary = await this.apiRequest('/payments/summary');
     },
 
     getDayTotalsString(date) {
@@ -313,9 +471,9 @@ function invoiceKeeperApp() {
         .join(' | ');
     },
 
-    cycleJournalFilter() {
-      const order = ['', 'Одобрено', 'Отказано', 'В ожидании'];
-      this.journalStatusFilter = order[(order.indexOf(this.journalStatusFilter) + 1) % order.length];
+    setHistoryFilter(status) {
+      this.journalStatusFilter = status;
+      this.isHistoryFilterOpen = false;
     },
 
     resetTableFilters() {
@@ -327,91 +485,138 @@ function invoiceKeeperApp() {
 
     openDayModal(date) {
       this.selectedDateISO = date;
-      this.newRec.currency = this.defaultCurrency;
+      this.newRec.currency = 'RUB';
       this.newRec.paidAt = '';
+      this.newRec.description = '';
+      this.newRec.employee = '';
+      this.newRec.amount = '';
+      this.newRec.periodicity = 'monthly';
       this.newRec.status = 'В ожидании';
+      this.isDeptMenuOpen = false;
+      this.showAddDeptInput = false;
       this.isModalOpen = true;
     },
 
+    toggleAddDepartment() {
+      this.showAddDeptInput = !this.showAddDeptInput;
+      this.isDeptMenuOpen = false;
+      if (!this.showAddDeptInput) this.newDeptName = '';
+    },
+
+    addDepartment() {
+      const department = this.newDeptName.trim();
+      if (department && !this.departments.includes(department)) this.departments.push(department);
+      if (department) this.newRec.department = department;
+      this.newDeptName = '';
+      this.showAddDeptInput = false;
+    },
+
     async createRecord() {
-      if (!this.canManageRecurring) {
-        window.alert('Создавать регулярные платежи могут бухгалтер и администратор.');
-        return;
-      }
-      if (this.newRec.status === 'Отказано') {
-        window.alert('API не поддерживает статус «Отказано» при создании платежа.');
-        return;
-      }
-      const departmentId = this.departmentIdsByName[this.newRec.department]
-        || this.currentUser?.department_id;
-      if (!departmentId) {
-        window.alert('Не удалось определить отдел для нового платежа.');
-        return;
-      }
-
+      if (!this.isAdmin) return;
+      const body = {
+        title: this.newRec.description.trim(),
+        amount: Number(this.newRec.amount),
+        currency: this.newRec.currency,
+        first_due_date: this.selectedDateISO,
+        periodicity: this.newRec.periodicity,
+        department: this.newRec.department.trim() || null,
+        employee: this.newRec.employee.trim() || null
+      };
       try {
-        const recurring = await this.apiRequest('/recurring-payments', 'POST', {
-          title: this.newRec.description.trim(),
-          amount: Number(this.newRec.amount),
-          currency: this.newRec.currency,
-          first_due_date: this.selectedDateISO,
-          periodicity: this.newRec.periodicity,
-          department_id: departmentId
-        });
-
+        const recurring = await this.apiRequest('/recurring-payments', 'POST', body);
         if (this.newRec.status === 'Одобрено') {
-          const periods = await this.apiRequest(
+          const occurrences = await this.apiRequest(
             `/payment-occurrences?date_from=${this.selectedDateISO}&date_to=${this.selectedDateISO}&limit=500`
           );
-          const period = periods.find(item => item.recurring_payment_id === recurring.id);
-          if (!period) throw new Error('Платеж создан, но его период не найден для отметки оплаты.');
-          const paidDate = this.newRec.paidAt
-            || (this.selectedDateISO <= this.referenceTodayISO
-              ? this.selectedDateISO
-              : this.referenceTodayISO);
-          await this.apiRequest(`/payment-occurrences/${period.id}`, 'PATCH', {
+          const occurrence = occurrences.find(item => item.recurring_payment_id === recurring.id);
+          if (!occurrence) throw new Error('Платёж создан, но его период не найден для отметки оплаты.');
+          await this.apiRequest(`/payment-occurrences/${occurrence.id}`, 'PATCH', {
             is_paid: true,
-            paid_date: paidDate
+            paid_date: this.newRec.paidAt || this.referenceTodayISO
           });
         }
-
         this.isModalOpen = false;
-        this.newRec.description = '';
-        this.newRec.amount = '';
-        this.newRec.paidAt = '';
         await this.loadFromBackend();
       } catch (error) {
-        console.error('Не удалось создать платеж:', error);
-        window.alert(error.message);
+        this.showError(error);
+        await this.loadFromBackend();
       }
     },
 
     async deleteRecord(occurrenceId) {
-      if (!this.isAdmin) {
-        window.alert('Прекращать регулярные платежи может только администратор.');
-        return;
-      }
+      if (!this.isAdmin) return;
       const record = this.records.find(item => item.id === occurrenceId);
-      if (!record || !window.confirm('Прекратить регулярный платеж? История оплат сохранится.')) return;
+      if (!record || !window.confirm('Прекратить регулярный платёж? История оплат сохранится.')) return;
       try {
         await this.apiRequest(`/recurring-payments/${record.recurringId}`, 'DELETE');
         await this.loadFromBackend();
       } catch (error) {
-        console.error('Не удалось прекратить регулярный платеж:', error);
-        window.alert(error.message);
+        this.showError(error);
       }
     },
 
-    logout() {
-      this.authToken = '';
-      this.currentUser = null;
-      this.records = [];
-      localStorage.removeItem('invoice-keeper-token');
-      window.location.reload();
+    openFeedbackModal() {
+      if (this.isAdmin) return;
+      this.feedbackForm.employee = this.feedbackForm.employee || this.currentAccount.full_name || '';
+      this.feedbackForm.department = this.feedbackForm.department || 'Без отдела';
+      this.feedbackForm.dueDate = this.feedbackForm.dueDate || this.referenceTodayISO;
+      this.isFeedbackModalOpen = true;
+    },
+
+    async submitFeedback() {
+      const feedback = this.feedbackForm;
+      try {
+        await this.apiRequest('/feedback', 'POST', {
+          employee: feedback.employee.trim(),
+          department: feedback.department.trim(),
+          request: feedback.request.trim(),
+          amount: Number(feedback.amount),
+          currency: feedback.currency,
+          due_date: feedback.dueDate,
+          periodicity: feedback.periodicity
+        });
+        this.feedbackForm.request = '';
+        this.feedbackForm.amount = '';
+        this.isFeedbackModalOpen = false;
+        window.alert('Обращение отправлено администратору.');
+      } catch (error) {
+        this.showError(error);
+      }
+    },
+
+    async openTelegramModal() {
+      this.telegramLinkDetails = null;
+      this.telegramForm.login = '';
+      this.telegramForm.code = '';
+      this.isTelegramModalOpen = true;
+      try {
+        this.currentUser = await this.apiRequest('/auth/me');
+      } catch (error) {
+        this.showError(error);
+      }
+    },
+
+    async submitTelegram() {
+      try {
+        this.telegramLinkDetails = await this.apiRequest('/auth/telegram-link', 'POST', {});
+      } catch (error) {
+        this.showError(error);
+      }
+    },
+
+    async disconnectTelegram() {
+      try {
+        await this.apiRequest('/auth/telegram-link', 'DELETE');
+        this.currentUser = await this.apiRequest('/auth/me');
+        this.telegramLinkDetails = null;
+      } catch (error) {
+        this.showError(error);
+      }
     },
 
     statusColor(item) {
-      if (this.isOverdue(item)) return 'rejected';
+      if (item.isDeleted) return 'deleted-gray';
+      if (this.isOverdue(item) || item.status === 'Отказано') return 'rejected';
       if (item.status === 'Одобрено') return 'approved';
       return 'pending';
     },
@@ -423,7 +628,7 @@ function invoiceKeeperApp() {
     },
 
     formatMoney(amount, currency) {
-      return `${Number(amount).toLocaleString('ru-RU')} ${this.currencySymbol(currency || this.defaultCurrency)}`;
+      return `${Number(amount || 0).toLocaleString('ru-RU')} ${this.currencySymbol(currency || this.planCurrency)}`;
     },
 
     formatReadableDate(value) {

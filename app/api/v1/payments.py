@@ -18,10 +18,6 @@ router = APIRouter(tags=["Платежи"])
 
 @router.get("/recurring-payments", response_model=list[RecurringPaymentData])
 async def list_recurring(
-<<<<<<< HEAD
-    department_id: int | None = Query(None, description="Необязательный фильтр по отделу"),
-=======
->>>>>>> 7d3683a (пу пу пу)
     include_inactive: bool = False,
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),

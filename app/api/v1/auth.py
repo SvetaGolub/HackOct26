@@ -16,11 +16,7 @@ router = APIRouter(prefix="/auth", tags=["Авторизация"])
 
 @router.post("/login", response_model=AuthResponse)
 async def login(login_data: UserLogin, db: AsyncSession = Depends(get_db)):
-<<<<<<< HEAD
-    """Вход по логину (email) и паролю."""
-=======
     """Вход по логину и паролю."""
->>>>>>> 7d3683a (пу пу пу)
     return await AuthService.authenticate_user(db, login_data)
 
 

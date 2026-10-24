@@ -28,16 +28,6 @@ class UserService:
             if (await db.execute(stmt)).first():
                 raise HTTPException(status_code=400, detail="Этот Telegram ID уже привязан к другому пользователю")
 
-<<<<<<< HEAD
-    @staticmethod
-    async def _require_department(db: AsyncSession, department_id: int | None) -> None:
-        if department_id is None:
-            return
-        if await db.get(Department, department_id) is None:
-            raise HTTPException(status_code=404, detail="Отдел не найден")
-
-=======
->>>>>>> 7d3683a (пу пу пу)
     @classmethod
     async def list_users(cls, db: AsyncSession, actor: User, limit: int = 100, offset: int = 0) -> list[User]:
         require_roles(actor, UserRole.ADMIN)
@@ -53,14 +43,8 @@ class UserService:
         user = User(
             login=payload.login,
             password_hash=AuthService.get_password_hash(payload.password),
-<<<<<<< HEAD
-            full_name=payload.full_name or str(payload.email),
-            role=role,
-            department_id=payload.department_id,
-=======
             full_name=payload.full_name or payload.login,
             role=UserRole.USER,
->>>>>>> 7d3683a (пу пу пу)
             telegram_id=payload.telegram_id,
         )
         db.add(user)

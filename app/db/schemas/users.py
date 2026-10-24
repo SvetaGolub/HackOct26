@@ -1,26 +1,11 @@
-<<<<<<< HEAD
-from typing import Literal
-
-from pydantic import AliasChoices, BaseModel, EmailStr, Field
-=======
 from pydantic import BaseModel, Field
->>>>>>> 7d3683a (пу пу пу)
 
 from app.db.models.enum import UserRole
 
 
 class UserLogin(BaseModel):
-<<<<<<< HEAD
-    """Вход в систему (для всех ролей)."""
-    email: EmailStr = Field(
-        ...,
-        validation_alias=AliasChoices("login", "email"),
-        description="Логин (email)",
-    )
-=======
     """Вход по логину и паролю (для всех ролей)."""
     login: str = Field(..., min_length=1, max_length=255, description="Логин")
->>>>>>> 7d3683a (пу пу пу)
     # Нижней границы длины нет намеренно: пароль админа из .env может быть коротким
     password: str = Field(..., min_length=1, max_length=128, description="Пароль")
 
@@ -30,11 +15,6 @@ class UserCreate(BaseModel):
     login: str = Field(..., min_length=3, max_length=255)
     password: str = Field(..., min_length=6, max_length=128)
     full_name: str | None = Field(default=None, min_length=1, max_length=255)
-<<<<<<< HEAD
-    role: AssignableRole = "user"
-    department_id: int | None = Field(default=None, description="ID отдела")
-=======
->>>>>>> 7d3683a (пу пу пу)
     telegram_id: int | None = Field(default=None, description="Telegram ID для напоминаний")
 
 

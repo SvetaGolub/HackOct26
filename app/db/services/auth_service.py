@@ -49,10 +49,7 @@ class AuthService:
             jti=payload["jti"],
             expires_at=datetime.fromtimestamp(payload["exp"], timezone.utc),
         ))
-<<<<<<< HEAD
-=======
         AuditService.record(db, entity_type="auth", entity_id=user.id, action="login", actor=user)
->>>>>>> 7d3683a (пу пу пу)
         await db.commit()
         return AuthResponse(success=True, user=UserData.model_validate(user), accessToken=token)
 
@@ -85,11 +82,6 @@ class AuthService:
 
     @staticmethod
     async def logout(db: AsyncSession, token: str) -> None:
-<<<<<<< HEAD
-        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.JWT_ALGORITHM])
-        session = (await db.execute(
-            select(AuthSession).where(AuthSession.jti == payload["jti"])
-=======
         try:
             payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.JWT_ALGORITHM])
             jti = payload["jti"]
@@ -97,17 +89,13 @@ class AuthService:
             raise HTTPException(status_code=401, detail="Требуется авторизация")
         session = (await db.execute(
             select(AuthSession).where(AuthSession.jti == jti)
->>>>>>> 7d3683a (пу пу пу)
         )).scalar_one_or_none()
         if session is None:
             raise HTTPException(status_code=401, detail="Сессия не найдена")
         session.revoked_at = datetime.now(timezone.utc)
-<<<<<<< HEAD
-=======
         user = await db.get(User, session.user_id)
         if user is not None:
             AuditService.record(db, entity_type="auth", entity_id=user.id, action="logout", actor=user)
->>>>>>> 7d3683a (пу пу пу)
         await db.commit()
 
     @classmethod

@@ -34,33 +34,21 @@ class PaymentOccurrence(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     recurring_payment_id: Mapped[int] = mapped_column(
         ForeignKey("recurring_payments.id", ondelete="RESTRICT"), nullable=False, index=True
-<<<<<<< HEAD
-    )
-    department_id: Mapped[int | None] = mapped_column(
-        ForeignKey("departments.id", ondelete="RESTRICT"), nullable=True, index=True
-=======
->>>>>>> 7d3683a (пу пу пу)
     )
 
     # Снимок названия, суммы и валюты: история не меняется задним числом
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     currency: Mapped[Currency] = mapped_column(str_enum(Currency, 3), nullable=False)
+    department: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    employee: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-<<<<<<< HEAD
-    # period: первое число месяца; due_date: срок оплаты для этого периода.
-=======
     # period: первое число месяца; due_date: срок оплаты этого периода
->>>>>>> 7d3683a (пу пу пу)
     period: Mapped[date] = mapped_column(Date, nullable=False)
     due_date: Mapped[date] = mapped_column(Date, nullable=False)
 
     is_paid: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-<<<<<<< HEAD
-    paid_date: Mapped[date | None] = mapped_column(Date, nullable=True)  # при отмене оплаты NULL
-=======
     paid_date: Mapped[date | None] = mapped_column(Date, nullable=True)  # при отмене NULL
->>>>>>> 7d3683a (пу пу пу)
     paid_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
