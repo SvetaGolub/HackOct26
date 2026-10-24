@@ -27,7 +27,7 @@ services:
       db:
         condition: service_healthy
     expose:
-      - "8000"
+      - "80"
 
   web:
     image: nginx:stable-alpine
