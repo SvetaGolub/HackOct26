@@ -12,7 +12,7 @@ from app.db.schemas import (
     CurrencySummary, OccurrenceData, OccurrenceStatusFilter, OccurrenceUpdate,
     RecurringPaymentCreate,
 )
-from app.db.services.access import (
+from app.db.schemas.access import (
     can_access_department, forbidden, is_staff, not_found, require_roles,
     resolve_department, scope_department,
 )

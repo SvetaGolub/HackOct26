@@ -14,7 +14,7 @@ async def email(request: Request) -> bool:
     form = await request.form()
     async with async_session_maker() as db:
         user = (await db.execute(
-            select(User).where(User.login == form.get("username"))
+            select(User).where(User.email == form.get("username"))
         )).scalar_one_or_none()
     if (user and user.role == UserRole.ADMIN.value
             and AuthService.verify_password(str(form.get("password")), user.password_hash)):
@@ -35,7 +35,7 @@ class AdminAuth(AuthenticationBackend):
 
 
 class UserAdmin(ModelView, model=User):
-    column_list = [User.id, User.login, User.full_name, User.role, User.telegram_id]
+    column_list = [User.id, User.email, User.full_name, User.role, User.telegram_id]
     can_create = False   # пароль нужно хэшировать, создавайте через API
     can_edit = False
 

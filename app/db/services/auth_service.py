@@ -63,9 +63,9 @@ class AuthService:
     async def ensure_system_admin(cls, db: AsyncSession) -> None:
         """Создаёт/синхронизирует администратора из .env. Вызывать при старте приложения.
 
-        Нужны ADMIN_EMAIL и ADMIN_PASSWORD в настройках. Повторный запуск ничего не дублирует.
+        Нужны ADMIN_LOGIN и ADMIN_PASSWORD в настройках. Повторный запуск ничего не дублирует.
         """
-        email, password = settings.ADMIN_EMAIL, settings.ADMIN_PASSWORD
+        email, password = settings.ADMIN_LOGIN, settings.ADMIN_PASSWORD
         admin = (await db.execute(select(User).where(User.is_system.is_(True)))).scalar_one_or_none()
 
         if admin is None:

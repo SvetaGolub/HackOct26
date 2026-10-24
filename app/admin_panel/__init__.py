@@ -1,3 +1,3 @@
-from app.admin_panel.views import UserAdmin, PaymentAdmin, AccessLogAdmin
+from app.admin_panel.setup import OccurrenceAdmin, RecurringPaymentAdmin, UserAdmin
 
-__all__ = ["UserAdmin", "PaymentAdmin", "AccessLogAdmin"]
+__all__ = ["UserAdmin", "RecurringPaymentAdmin", "OccurrenceAdmin"]

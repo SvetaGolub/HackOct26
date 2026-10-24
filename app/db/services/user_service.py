@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import Department, User
 from app.db.models.enum import UserRole
 from app.db.schemas import UserCreate, UserUpdate
-from app.db.services.access import forbidden, not_found, require_roles
+from app.db.schemas.access import forbidden, not_found, require_roles
 from app.db.services.audit_service import AuditService
 from app.db.services.auth_service import AuthService
 

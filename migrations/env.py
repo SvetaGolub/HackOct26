@@ -6,22 +6,15 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-# 1. Импортируем конфигурацию вашего приложения и базовый класс моделей
 from app.config import settings
 from app.db.database import Base
+from app.db import models  # noqa: F401 — регистрирует все модели в Base.metadata
 
-# 2. Обязательно импортируем ВСЕ модели, чтобы Alembic "увидел" их таблицы
-from app.db.models.user import User
-from app.db.models.payment import Payment
-from app.db.models.access_log import AccessLog
-
-# Это стандартная настройка логов из alembic.ini
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# 3. Указываем метаданные наших моделей для автоматической генерации миграций
 target_metadata = Base.metadata
 
 

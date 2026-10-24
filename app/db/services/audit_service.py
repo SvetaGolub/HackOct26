@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import AuditLog, User
-from app.db.services.access import scope_department
+from app.db.schemas.access import scope_department
 
 
 def _jsonable(value: Any) -> Any:
