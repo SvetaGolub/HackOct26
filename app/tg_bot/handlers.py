@@ -15,7 +15,7 @@ router = Router()
 router.message.filter(F.chat.type == "private")
 
 HELP = (
-    "Привет! Я напоминаю о платежах вашего отдела.\n\n"
+    "Привет! Я напоминаю о регулярных платежах.\n\n"
     "Как привязать аккаунт:\n"
     "1. Войдите в панель и нажмите «Привязать Telegram» (получите одноразовый код).\n"
     "2. Отправьте мне: /link КОД\n\n"
@@ -99,7 +99,7 @@ async def mark_paid(callback: CallbackQuery):
                                   show_alert=True)
             return
         try:
-            # права и границы отдела проверяет сам сервис, как и для обычного API
+            # права проверяет сам сервис, как и для обычного API
             data = await PaymentService.get_occurrence(db, occ_id, user)
             already = data.is_paid
             if not already:

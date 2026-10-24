@@ -1,32 +1,40 @@
+<<<<<<< HEAD
 from typing import Literal
 
 from pydantic import AliasChoices, BaseModel, EmailStr, Field
+=======
+from pydantic import BaseModel, Field
+>>>>>>> 7d3683a (пу пу пу)
 
 from app.db.models.enum import UserRole
-from app.db.schemas.department import DepartmentData
-
-# Через API создаются только эти роли. Администратор задаётся через .env.
-AssignableRole = Literal["user", "accountant"]
 
 
 class UserLogin(BaseModel):
+<<<<<<< HEAD
     """Вход в систему (для всех ролей)."""
     email: EmailStr = Field(
         ...,
         validation_alias=AliasChoices("login", "email"),
         description="Логин (email)",
     )
+=======
+    """Вход по логину и паролю (для всех ролей)."""
+    login: str = Field(..., min_length=1, max_length=255, description="Логин")
+>>>>>>> 7d3683a (пу пу пу)
     # Нижней границы длины нет намеренно: пароль админа из .env может быть коротким
     password: str = Field(..., min_length=1, max_length=128, description="Пароль")
 
 
 class UserCreate(BaseModel):
-    """Создание пользователя или бухгалтера администратором."""
-    email: EmailStr
+    """Создание обычного пользователя администратором (роль всегда user)."""
+    login: str = Field(..., min_length=3, max_length=255)
     password: str = Field(..., min_length=6, max_length=128)
     full_name: str | None = Field(default=None, min_length=1, max_length=255)
+<<<<<<< HEAD
     role: AssignableRole = "user"
     department_id: int | None = Field(default=None, description="ID отдела")
+=======
+>>>>>>> 7d3683a (пу пу пу)
     telegram_id: int | None = Field(default=None, description="Telegram ID для напоминаний")
 
 
@@ -34,11 +42,9 @@ class UserUpdate(BaseModel):
     """PATCH /users/{id}: передаются только изменяемые поля."""
     model_config = {"extra": "forbid"}
 
-    email: EmailStr | None = None
+    login: str | None = Field(default=None, min_length=3, max_length=255)
     password: str | None = Field(default=None, min_length=6, max_length=128)
     full_name: str | None = Field(default=None, min_length=1, max_length=255)
-    role: AssignableRole | None = None
-    department_id: int | None = None
     telegram_id: int | None = None
 
 
@@ -46,11 +52,9 @@ class UserData(BaseModel):
     model_config = {"from_attributes": True}
 
     id: int
-    email: EmailStr
+    login: str
     full_name: str
     role: UserRole
-    department_id: int | None = None
-    department: DepartmentData | None = None
     is_system: bool = False
     telegram_id: int | None = None
 

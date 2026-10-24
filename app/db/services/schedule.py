@@ -60,7 +60,6 @@ async def ensure_occurrences(db: AsyncSession, rp: RecurringPayment, today: date
             break
         db.add(PaymentOccurrence(
             recurring_payment_id=rp.id,
-            department_id=rp.department_id,
             title=rp.title,
             amount=rp.amount,
             currency=rp.currency,

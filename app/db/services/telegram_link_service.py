@@ -62,7 +62,7 @@ class TelegramLinkService:
         user.telegram_id = telegram_id
         AuditService.record(
             db, entity_type="user", entity_id=user.id, action="telegram_link", actor=user,
-            department_id=user.department_id, new={"telegram_linked": True},
+            new={"telegram_linked": True},
         )
         await db.commit()
         return user
@@ -79,7 +79,7 @@ class TelegramLinkService:
         user.telegram_id = None
         AuditService.record(
             db, entity_type="user", entity_id=user.id, action="telegram_unlink", actor=user,
-            department_id=user.department_id, new={"telegram_linked": False},
+            new={"telegram_linked": False},
         )
         await db.commit()
         return True

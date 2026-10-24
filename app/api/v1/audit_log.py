@@ -14,10 +14,9 @@ router = APIRouter(tags=["История изменений"])
 
 @router.get("/audit-log", response_model=list[AuditLogData])
 async def list_audit_log(
-    entity_type: str | None = Query(None, description="expense_request, recurring_payment, payment_occurrence, user, department"),
+    entity_type: str | None = Query(None, description="auth, recurring_payment, payment_occurrence, user"),
     entity_id: int | None = None,
     action: str | None = None,
-    department_id: int | None = Query(None, description="Только для админа; остальные видят свой отдел"),
     date_from: date | None = None,
     date_to: date | None = None,
     limit: int = Query(100, ge=1, le=500),
@@ -25,8 +24,8 @@ async def list_audit_log(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """История отдела (админ видит все отделы)."""
+    """Логи авторизации и действий (только администратор)."""
     return await AuditService.list_logs(
         db, user, entity_type=entity_type, entity_id=entity_id, action=action,
-        department_id=department_id, date_from=date_from, date_to=date_to, limit=limit, offset=offset,
+        date_from=date_from, date_to=date_to, limit=limit, offset=offset,
     )

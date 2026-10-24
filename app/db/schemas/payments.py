@@ -21,9 +21,12 @@ class RecurringPaymentCreate(BaseModel):
     currency: Currency
     first_due_date: date = Field(..., description="Дата ближайшей оплаты")
     periodicity: Periodicity = Periodicity.MONTHLY
+<<<<<<< HEAD
     department_id: int | None = Field(
         default=None, description="Необязательный отдел; бухгалтер создаёт платёж в своём отделе"
     )
+=======
+>>>>>>> 7d3683a (пу пу пу)
 
 
 class RecurringPaymentData(BaseModel):
@@ -35,7 +38,10 @@ class RecurringPaymentData(BaseModel):
     currency: Currency
     periodicity: Periodicity
     first_due_date: date
+<<<<<<< HEAD
     department_id: int | None = None
+=======
+>>>>>>> 7d3683a (пу пу пу)
     is_active: bool
     deleted_at: datetime | None = None
     created_at: datetime
@@ -46,7 +52,10 @@ class OccurrenceData(BaseModel):
 
     id: int
     recurring_payment_id: int
+<<<<<<< HEAD
     department_id: int | None = None
+=======
+>>>>>>> 7d3683a (пу пу пу)
     title: str
     amount: Decimal
     currency: Currency
@@ -63,7 +72,6 @@ class OccurrenceData(BaseModel):
         return cls(
             id=occ.id,
             recurring_payment_id=occ.recurring_payment_id,
-            department_id=occ.department_id,
             title=occ.title,
             amount=occ.amount,
             currency=occ.currency,
@@ -79,8 +87,13 @@ class OccurrenceData(BaseModel):
 class OccurrenceUpdate(BaseModel):
     """PATCH /payment-occurrences/{id}.
 
+<<<<<<< HEAD
     - is_paid / paid_date: отметка оплаты и исправление фактической даты
       (user, accountant, admin; срок при этом не меняется).
+=======
+    is_paid / paid_date: отметка оплаты, её отмена и исправление фактической даты
+    (user и admin; срок при этом не меняется).
+>>>>>>> 7d3683a (пу пу пу)
     """
     model_config = {"extra": "forbid"}
 

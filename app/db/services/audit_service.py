@@ -7,7 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import AuditLog, User
-from app.db.schemas.access import scope_department
+from app.db.models.enum import UserRole
+from app.db.schemas.access import require_roles
 
 
 def _jsonable(value: Any) -> Any:
@@ -31,7 +32,6 @@ class AuditService:
         entity_id: int,
         action: str,
         actor: User | None,
-        department_id: int | None,
         old: dict | None = None,
         new: dict | None = None,
     ) -> None:
@@ -46,8 +46,7 @@ class AuditService:
             old_value=_jsonable(old) if old is not None else None,
             new_value=_jsonable(new) if new is not None else None,
             actor_id=actor.id if actor else None,
-            actor_email=actor.email if actor else None,
-            department_id=department_id,
+            actor_login=actor.login if actor else None,
         ))
 
     @staticmethod
@@ -58,14 +57,14 @@ class AuditService:
         entity_type: str | None = None,
         entity_id: int | None = None,
         action: str | None = None,
-        department_id: int | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
         limit: int = 100,
         offset: int = 0,
     ) -> list[AuditLog]:
-        """История: админ видит все отделы, остальные только свой."""
-        stmt = scope_department(select(AuditLog), AuditLog, actor, department_id)
+        """Логи авторизации и действий: только администратор."""
+        require_roles(actor, UserRole.ADMIN)
+        stmt = select(AuditLog)
         if entity_type:
             stmt = stmt.where(AuditLog.entity_type == entity_type)
         if entity_id is not None:

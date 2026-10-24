@@ -14,13 +14,12 @@ router = APIRouter(tags=["Пользователи"])
 
 @router.get("/users", response_model=list[UserData])
 async def list_users(
-    department_id: int | None = None,
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    return await UserService.list_users(db, user, department_id, limit, offset)
+    return await UserService.list_users(db, user, limit, offset)
 
 
 @router.post("/users", response_model=UserData, status_code=201)

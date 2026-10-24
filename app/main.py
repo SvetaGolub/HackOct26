@@ -18,8 +18,6 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.payments import router as payments_router
 from app.api.v1.users import router as users_router
 from app.api.v1.audit_log import router as audit_log_router
-from app.api.v1.departments import router as departments_router
-from app.api.v1.expense_requests import router as expense_requests_router
 from app.config import settings
 from app.db.services import AuthService, ReminderService
 from app.db.session import async_session_maker, engine
@@ -43,8 +41,8 @@ async def wait_for_db(retries: int = 30, delay: float = 2.0) -> None:
     raise RuntimeError("База данных недоступна")
 
 
-async def send_telegram(chat_id: int, text_: str, occurrence_id: int) -> bool:
-    """Напоминание с кнопкой «Оплачено».
+async def send_telegram(chat_id: int | str, text_: str, occurrence_id: int) -> bool:
+    """Напоминание с кнопкой «Оплачено» (в общий чат или лично пользователю).
 
     False означает «не доставлено»: ReminderService.tick снимет резерв и повторит позже.
     """
@@ -60,7 +58,7 @@ async def run_reminders() -> None:
     """Задача планировщика. Исключения не должны убивать расписание."""
     try:
         async with async_session_maker() as db:
-            await ReminderService.tick(db, send_telegram)
+            await ReminderService.tick(db, send_telegram, settings.telegram_chat_id)
     except Exception:  # noqa: BLE001
         logger.exception("Сбой прохода напоминаний")
 
@@ -110,8 +108,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for r in (auth_router, payments_router, users_router, departments_router,
-          expense_requests_router, audit_log_router):
+for r in (auth_router, payments_router, users_router, audit_log_router):
     app.include_router(r, prefix="/api/v1")
 
 

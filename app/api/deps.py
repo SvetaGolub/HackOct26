@@ -16,7 +16,7 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """Валидация JWT и загрузка пользователя из БД (роль и отдел всегда актуальные)."""
+    """Валидация JWT и загрузка пользователя из БД (роль всегда актуальная)."""
     if credentials is None:
         raise HTTPException(
             status_code=401, detail="Требуется авторизация", headers={"WWW-Authenticate": "Bearer"}

@@ -12,6 +12,7 @@ from app.config import settings
 from app.db.models import AuthSession, User
 from app.db.models.enum import UserRole
 from app.db.schemas import AuthResponse, UserData, UserLogin
+from app.db.services.audit_service import AuditService
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -35,10 +36,10 @@ class AuthService:
 
     @classmethod
     async def authenticate_user(cls, db: AsyncSession, login_data: UserLogin) -> AuthResponse:
-        user = (await db.execute(select(User).where(User.email == login_data.email))).scalar_one_or_none()
+        user = (await db.execute(select(User).where(User.login == login_data.login))).scalar_one_or_none()
         if not user or not cls.verify_password(login_data.password, user.password_hash):
             raise HTTPException(
-                status_code=401, detail="Неверный email или пароль", headers={"WWW-Authenticate": "Bearer"}
+                status_code=401, detail="Неверный логин или пароль", headers={"WWW-Authenticate": "Bearer"}
             )
         # Роль в токен не кладём: актуальную роль всегда берём из БД
         token = cls.create_access_token({"sub": str(user.id)})
@@ -48,6 +49,10 @@ class AuthService:
             jti=payload["jti"],
             expires_at=datetime.fromtimestamp(payload["exp"], timezone.utc),
         ))
+<<<<<<< HEAD
+=======
+        AuditService.record(db, entity_type="auth", entity_id=user.id, action="login", actor=user)
+>>>>>>> 7d3683a (пу пу пу)
         await db.commit()
         return AuthResponse(success=True, user=UserData.model_validate(user), accessToken=token)
 
@@ -80,13 +85,29 @@ class AuthService:
 
     @staticmethod
     async def logout(db: AsyncSession, token: str) -> None:
+<<<<<<< HEAD
         payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.JWT_ALGORITHM])
         session = (await db.execute(
             select(AuthSession).where(AuthSession.jti == payload["jti"])
+=======
+        try:
+            payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.JWT_ALGORITHM])
+            jti = payload["jti"]
+        except (jwt.PyJWTError, KeyError):
+            raise HTTPException(status_code=401, detail="Требуется авторизация")
+        session = (await db.execute(
+            select(AuthSession).where(AuthSession.jti == jti)
+>>>>>>> 7d3683a (пу пу пу)
         )).scalar_one_or_none()
         if session is None:
             raise HTTPException(status_code=401, detail="Сессия не найдена")
         session.revoked_at = datetime.now(timezone.utc)
+<<<<<<< HEAD
+=======
+        user = await db.get(User, session.user_id)
+        if user is not None:
+            AuditService.record(db, entity_type="auth", entity_id=user.id, action="logout", actor=user)
+>>>>>>> 7d3683a (пу пу пу)
         await db.commit()
 
     @classmethod
@@ -95,19 +116,19 @@ class AuthService:
 
         Нужны ADMIN_LOGIN и ADMIN_PASSWORD в настройках. Повторный запуск ничего не дублирует.
         """
-        email, password = settings.ADMIN_LOGIN, settings.ADMIN_PASSWORD
+        login, password = settings.ADMIN_LOGIN, settings.ADMIN_PASSWORD
         admin = (await db.execute(select(User).where(User.is_system.is_(True)))).scalar_one_or_none()
 
         if admin is None:
-            clash = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+            clash = (await db.execute(select(User).where(User.login == login))).scalar_one_or_none()
             if clash is not None:
-                raise RuntimeError(f"Пользователь {email} уже существует и не является системным администратором")
+                raise RuntimeError(f"Пользователь {login} уже существует и не является системным администратором")
             db.add(User(
-                email=email, password_hash=cls.get_password_hash(password),
-                full_name="Administrator", role=UserRole.ADMIN, department_id=None, is_system=True,
+                login=login, password_hash=cls.get_password_hash(password),
+                full_name="Administrator", role=UserRole.ADMIN, is_system=True,
             ))
         else:
-            admin.email = email
+            admin.login = login
             if not cls.verify_password(password, admin.password_hash):
                 admin.password_hash = cls.get_password_hash(password)
         await db.commit()

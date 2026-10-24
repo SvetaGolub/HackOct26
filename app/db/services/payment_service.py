@@ -6,15 +6,23 @@ from sqlalchemy import and_, case, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+<<<<<<< HEAD
 from app.db.models import Department, PaymentOccurrence, RecurringPayment, User
+=======
+from app.db.models import PaymentOccurrence, RecurringPayment, User
+>>>>>>> 7d3683a (пу пу пу)
 from app.db.models.enum import Currency, UserRole
 from app.db.schemas import (
     CurrencySummary, OccurrenceData, OccurrenceStatusFilter, OccurrenceUpdate,
     RecurringPaymentCreate,
 )
+<<<<<<< HEAD
 from app.db.schemas.access import (
     forbidden, is_admin, not_found, require_roles,
 )
+=======
+from app.db.schemas.access import not_found, require_roles
+>>>>>>> 7d3683a (пу пу пу)
 from app.db.services.audit_service import AuditService
 from app.db.services.schedule import ensure_occurrences, today_local
 
@@ -33,6 +41,7 @@ class PaymentService:
 
     @classmethod
     async def create_recurring(cls, db: AsyncSession, payload: RecurringPaymentCreate, actor: User) -> RecurringPayment:
+<<<<<<< HEAD
         """Создание регулярного платежа напрямую: администратор (любой отдел) или бухгалтер (свой)."""
         require_roles(actor, UserRole.ADMIN, UserRole.ACCOUNTANT)
         if is_admin(actor):
@@ -47,6 +56,10 @@ class PaymentService:
             if payload.department_id is not None and payload.department_id != department_id:
                 raise forbidden("Нельзя действовать в чужом отделе")
 
+=======
+        """Создание регулярного платежа: только администратор."""
+        require_roles(actor, UserRole.ADMIN)
+>>>>>>> 7d3683a (пу пу пу)
         rp = RecurringPayment(
             title=payload.title.strip(),
             amount=payload.amount,
@@ -54,7 +67,6 @@ class PaymentService:
             periodicity=payload.periodicity,
             first_due_date=payload.first_due_date,
             anchor_day=payload.first_due_date.day,
-            department_id=department_id,
             created_by=actor.id,
         )
         db.add(rp)
@@ -62,7 +74,6 @@ class PaymentService:
         await ensure_occurrences(db, rp)
         AuditService.record(
             db, entity_type="recurring_payment", entity_id=rp.id, action="create", actor=actor,
-            department_id=department_id,
             new={"title": rp.title, "amount": rp.amount, "currency": rp.currency,
                  "periodicity": rp.periodicity, "first_due_date": rp.first_due_date},
         )
@@ -72,12 +83,16 @@ class PaymentService:
 
     @staticmethod
     async def list_recurring(
-        db: AsyncSession, actor: User, department_id: int | None = None,
-        include_inactive: bool = False, limit: int = 100, offset: int = 0,
+        db: AsyncSession, actor: User, include_inactive: bool = False, limit: int = 100, offset: int = 0,
     ) -> list[RecurringPayment]:
+<<<<<<< HEAD
         stmt = select(RecurringPayment)
         if department_id is not None:
             stmt = stmt.where(RecurringPayment.department_id == department_id)
+=======
+        """Общий список для всех авторизованных пользователей."""
+        stmt = select(RecurringPayment)
+>>>>>>> 7d3683a (пу пу пу)
         if not include_inactive:
             stmt = stmt.where(RecurringPayment.is_active.is_(True))
         stmt = stmt.order_by(RecurringPayment.id).limit(limit).offset(offset)
@@ -111,7 +126,7 @@ class PaymentService:
         )
         AuditService.record(
             db, entity_type="recurring_payment", entity_id=rp.id, action="delete", actor=actor,
-            department_id=rp.department_id, old={"is_active": True}, new={"is_active": False},
+            old={"is_active": True}, new={"is_active": False},
         )
         await db.commit()
 
@@ -122,7 +137,6 @@ class PaymentService:
         cls, db: AsyncSession, actor: User, *,
         status: OccurrenceStatusFilter | None = None,
         currency: Currency | None = None,
-        department_id: int | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
         limit: int = 100,
@@ -131,8 +145,11 @@ class PaymentService:
         today = today_local()
         O = PaymentOccurrence
         stmt = select(O)
+<<<<<<< HEAD
         if department_id is not None:
             stmt = stmt.where(O.department_id == department_id)
+=======
+>>>>>>> 7d3683a (пу пу пу)
         if status == OccurrenceStatusFilter.PAID:
             stmt = stmt.where(O.is_paid.is_(True))
         elif status == OccurrenceStatusFilter.UNPAID:
@@ -150,7 +167,7 @@ class PaymentService:
         return [OccurrenceData.build(o, today) for o in rows]
 
     @staticmethod
-    async def _load_occurrence(db: AsyncSession, occurrence_id: int, actor: User, for_update: bool = False):
+    async def _load_occurrence(db: AsyncSession, occurrence_id: int, for_update: bool = False):
         stmt = (
             select(PaymentOccurrence)
             .options(selectinload(PaymentOccurrence.recurring_payment))
@@ -165,26 +182,30 @@ class PaymentService:
 
     @classmethod
     async def get_occurrence(cls, db: AsyncSession, occurrence_id: int, actor: User) -> OccurrenceData:
-        occ = await cls._load_occurrence(db, occurrence_id, actor)
+        occ = await cls._load_occurrence(db, occurrence_id)
         return OccurrenceData.build(occ, today_local())
 
     @classmethod
     async def update_occurrence(
         cls, db: AsyncSession, occurrence_id: int, payload: OccurrenceUpdate, actor: User
     ) -> OccurrenceData:
+<<<<<<< HEAD
         """Отметка или отмена оплаты, исправление фактической даты.
 
         Дата оплаты доступна всем авторизованным ролям.
         """
         occ = await cls._load_occurrence(db, occurrence_id, actor, for_update=True)
+=======
+        """Отметка или отмена оплаты, исправление фактической даты (user и admin)."""
+        occ = await cls._load_occurrence(db, occurrence_id, for_update=True)
+>>>>>>> 7d3683a (пу пу пу)
         today = today_local()
-        dept = occ.department_id
         changed = False
 
         def audit(action: str, old: dict, new: dict) -> None:
             AuditService.record(
                 db, entity_type="payment_occurrence", entity_id=occ.id, action=action,
-                actor=actor, department_id=dept, old=old, new=new,
+                actor=actor, old=old, new=new,
             )
 
         # --- оплата ---
@@ -217,7 +238,7 @@ class PaymentService:
     # ---------- итоги ----------
 
     @staticmethod
-    async def summary(db: AsyncSession, actor: User, department_id: int | None = None) -> list[CurrencySummary]:
+    async def summary(db: AsyncSession, actor: User) -> list[CurrencySummary]:
         """Итоги отдельно по каждой валюте (без конвертации); всегда три валюты.
 
         overdue: неоплаченные периоды со сроком в прошлом (текущая задолженность).
@@ -231,10 +252,15 @@ class PaymentService:
                 func.coalesce(func.sum(case((O.is_paid.is_(False), O.amount), else_=0)), 0),
                 func.coalesce(func.sum(case((and_(O.is_paid.is_(False), O.due_date < today), O.amount), else_=0)), 0),
             )
+<<<<<<< HEAD
         )
         if department_id is not None:
             stmt = stmt.where(O.department_id == department_id)
         stmt = stmt.group_by(O.currency)
+=======
+            .group_by(O.currency)
+        )
+>>>>>>> 7d3683a (пу пу пу)
         found = {row[0]: row for row in (await db.execute(stmt)).all()}
 
         result = []

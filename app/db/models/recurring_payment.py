@@ -33,16 +33,19 @@ class RecurringPayment(Base):
         str_enum(Periodicity), default=Periodicity.MONTHLY, nullable=False
     )
 
-    # Ближайшая дата оплаты и "якорный" день месяца.
-    # Якорь нужен, чтобы после 28 февраля вернуться на 31 марта, а не застрять на 28.
+    # Ближайшая дата оплаты и "якорный" день месяца: нет такого числа -> последний
+    # день месяца, а после 28 февраля возвращаемся на 31 марта.
     first_due_date: Mapped[date] = mapped_column(Date, nullable=False)
     anchor_day: Mapped[int] = mapped_column(Integer, nullable=False)
 
+<<<<<<< HEAD
     # Отдел, которому принадлежит платёж (граница видимости)
     department_id: Mapped[int | None] = mapped_column(
         ForeignKey("departments.id", ondelete="RESTRICT"), nullable=True, index=True
     )
 
+=======
+>>>>>>> 7d3683a (пу пу пу)
     # Мягкое удаление: история сохраняется, напоминания прекращаются
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -14,6 +14,5 @@ class AuditLogData(BaseModel):
     old_value: dict[str, Any] | None = None
     new_value: dict[str, Any] | None = None
     actor_id: int | None = None
-    actor_email: str | None = None
-    department_id: int | None = None
+    actor_login: str | None = None
     created_at: datetime
