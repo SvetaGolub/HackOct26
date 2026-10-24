@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import ExpenseRequest, RecurringPayment, User
 from app.db.models.enum import ExpenseStatus, UserRole
 from app.db.schemas import ExpenseRequestApprove, ExpenseRequestCreate, ExpenseRequestReject
-from app.db.services.access import (
+from app.db.schemas.access import (
     can_access_department, forbidden, is_admin, not_found, require_roles,
     resolve_department, scope_department,
 )
