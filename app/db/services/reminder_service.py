@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 REMINDER_DAYS = getattr(settings, "REMINDER_DAYS", 3)  # ТЗ: минимум за 3 дня
 
-SendFunc = Callable[[int, str], Awaitable[bool]]  # (telegram_id, text) -> доставлено ли
+SendFunc = Callable[[int, str, int], Awaitable[bool]]  # (telegram_id, text, occurrence_id) -> доставлено ли
 
 
 @dataclass
@@ -124,7 +124,7 @@ class ReminderService:
             if not await cls._reserve(db, r.occurrence_id, r.user_id):
                 continue
             try:
-                ok = await send(r.telegram_id, r.text)
+                ok = await send(r.telegram_id, r.text, r.occurrence_id)
             except Exception:  # noqa: BLE001
                 logger.exception("Ошибка отправки напоминания user=%s occ=%s", r.user_id, r.occurrence_id)
                 ok = False

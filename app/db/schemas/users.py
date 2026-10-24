@@ -65,3 +65,10 @@ class LogoutResponse(BaseModel):
         default="Выход выполнен успешно. Удалите токен на стороне клиента.",
         description="Инструкция для фронтенда",
     )
+
+
+class TelegramLinkResponse(BaseModel):
+    """Одноразовый код для привязки Telegram."""
+    code: str = Field(..., description="Код: отправьте боту /start КОД или /link КОД")
+    expires_in: int = Field(..., description="Время жизни кода, секунды")
+    deep_link: str | None = Field(default=None, description="Ссылка t.me (если задан TELEGRAM_BOT_USERNAME)")

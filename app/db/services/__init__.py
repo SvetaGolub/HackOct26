@@ -6,9 +6,10 @@ from app.db.services.department_service import DepartmentService
 from app.db.services.expense_service import ExpenseService
 from app.db.services.payment_service import PaymentService
 from app.db.services.reminder_service import ReminderService
+from app.db.services.telegram_link_service import TelegramLinkService
 from app.db.services.user_service import UserService
 
 __all__ = [
     "AuditService", "AuthService", "DepartmentService",
-    "ExpenseService", "PaymentService", "ReminderService", "UserService",
+    "ExpenseService", "PaymentService", "ReminderService", "TelegramLinkService", "UserService",
 ]

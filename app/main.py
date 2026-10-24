@@ -23,6 +23,7 @@ from app.api.v1.expense_requests import router as expense_requests_router
 from app.config import settings
 from app.db.services import AuthService, ReminderService
 from app.db.session import async_session_maker, engine
+from app.tg_bot.keyboards import pay_keyboard
 from app.tg_bot.loader import bot, dp
 
 logging.basicConfig(level=logging.INFO)
@@ -42,10 +43,13 @@ async def wait_for_db(retries: int = 30, delay: float = 2.0) -> None:
     raise RuntimeError("База данных недоступна")
 
 
-async def send_telegram(chat_id: int, text_: str) -> bool:
-    """False означает «не доставлено»: ReminderService.tick снимет резерв и повторит позже."""
+async def send_telegram(chat_id: int, text_: str, occurrence_id: int) -> bool:
+    """Напоминание с кнопкой «Оплачено».
+
+    False означает «не доставлено»: ReminderService.tick снимет резерв и повторит позже.
+    """
     try:
-        await bot.send_message(chat_id, text_)
+        await bot.send_message(chat_id, text_, reply_markup=pay_keyboard(occurrence_id))
         return True
     except TelegramAPIError as exc:
         logger.warning("Telegram: не доставлено %s: %s", chat_id, exc)
