@@ -1,0 +1,89 @@
+from datetime import date, datetime
+from decimal import Decimal
+from typing import TYPE_CHECKING
+
+from sqlalchemy import (
+    Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Numeric, String,
+    UniqueConstraint,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import func
+
+from app.db.database import Base
+from app.db.models.enum import Currency
+from app.db.models.sa_types import str_enum
+
+if TYPE_CHECKING:
+    from app.db.models.recurring_payment import RecurringPayment
+
+
+class PaymentOccurrence(Base):
+    """Конкретный период оплаты: свой срок, своя отметка, своя фактическая дата."""
+
+    __tablename__ = "payment_occurrences"
+    __table_args__ = (
+        # Защита от дублей при повторной генерации. Ключ неизменяемый,
+        # поэтому перенос due_date бухгалтером не создаёт дубль периода.
+        UniqueConstraint("recurring_payment_id", "period", name="uq_occurrence_period"),
+        # is_paid и paid_date всегда согласованы
+        CheckConstraint(
+            "(is_paid = 0 AND paid_date IS NULL) OR (is_paid = 1 AND paid_date IS NOT NULL)",
+            name="ck_paid_consistency",
+        ),
+        CheckConstraint("amount > 0", name="ck_occurrence_amount_positive"),
+        Index("ix_occurrence_dept_due", "department_id", "due_date"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    recurring_payment_id: Mapped[int] = mapped_column(
+        ForeignKey("recurring_payments.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    department_id: Mapped[int] = mapped_column(
+        ForeignKey("departments.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+
+    # Снимок названия, суммы и валюты на момент создания периода:
+    # история не меняется задним числом
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    currency: Mapped[Currency] = mapped_column(str_enum(Currency, 3), nullable=False)
+
+    # period: первое число месяца периода (неизменяемый ключ)
+    # original_due_date: срок по расписанию, due_date: текущий (бухгалтер может перенести)
+    period: Mapped[date] = mapped_column(Date, nullable=False)
+    original_due_date: Mapped[date] = mapped_column(Date, nullable=False)
+    due_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    rescheduled_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    reschedule_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    is_paid: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    paid_date: Mapped[date | None] = mapped_column(Date, nullable=True)  # при отмене оплаты NULL
+    paid_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    recurring_payment: Mapped["RecurringPayment"] = relationship(
+        "RecurringPayment", back_populates="occurrences"
+    )
+
+    def is_overdue(self, today: date) -> bool:
+        return overdue(self.due_date, self.is_paid, self.paid_date, today)
+
+    def __repr__(self) -> str:
+        return f"<PaymentOccurrence(id={self.id}, due={self.due_date}, paid={self.is_paid})>"
+
+
+def overdue(due: date, is_paid: bool, paid_date: date | None, today: date) -> bool:
+    """Просрочка со следующего дня после срока; оплата в день срока вовремя.
+
+    today считайте в часовом поясе из .env, а не через date.today() сервера.
+    """
+    if is_paid and paid_date is not None:
+        return paid_date > due
+    return today > due

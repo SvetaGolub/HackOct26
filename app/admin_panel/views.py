@@ -37,7 +37,7 @@ class UserAdmin(ModelView, model=User):
 
     # Интеграция хэширования, если администратор меняет/создает пользователя через sqladmin напрямую
     async def on_model_change(self, data: dict, model: User, is_created: bool) -> None:
-        from app.db.services.auth_servic import AuthService
+        from app.db.services.auth_service import AuthService
         if "password_hash" in data and data["password_hash"]:
             # Если поле пароля заполнено, хэшируем его перед записью в БД
             data["password_hash"] = AuthService.get_password_hash(data["password_hash"])

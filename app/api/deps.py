@@ -1,9 +1,12 @@
+import token
+
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+from app.db.models.enum import UserRole
 from app.db.session import get_db
 from app.db.models import User
 from app.config import settings
@@ -31,4 +34,10 @@ async def get_current_user(
 
     if user is None:
         raise HTTPException(status_code=401, detail="Пользователь не найден")
+    return user
+
+payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.JWT_ALGORITHM])
+async def require_admin(user: User = Depends(get_current_user)) -> User:
+    if user.role != UserRole.ADMIN.value:
+        raise HTTPException(status_code=403, detail="Действие доступно только администратору")
     return user

@@ -1,7 +1,20 @@
-#Models package
+# Models package.
+# Импортируйте здесь ВСЕ модели, иначе Alembic не увидит их в Base.metadata.
 
-from app.db.models.access_log import AccessLog
+from app.db.models.department import Department
 from app.db.models.user import User
-from app.db.models.payment import Payment
+from app.db.models.expense_request import ExpenseRequest
+from app.db.models.recurring_payment import RecurringPayment
+from app.db.models.payment_occurrence import PaymentOccurrence
+from app.db.models.reminder_log import ReminderLog
+from app.db.models.audit_log import AuditLog
 
-__all__ = ["AccessLog", "User", "Payment"]
+__all__ = [
+    "Department",
+    "User",
+    "ExpenseRequest",
+    "RecurringPayment",
+    "PaymentOccurrence",
+    "ReminderLog",
+    "AuditLog",
+]
