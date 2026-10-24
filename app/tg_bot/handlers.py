@@ -108,7 +108,7 @@ async def mark_paid(callback: CallbackQuery):
             await callback.answer(str(exc.detail), show_alert=True)
             return
 
-    late = " (с опозданием)" if data.is_overdue else ""
+    late = " (с опозданием)" if data.overdue else ""
     await _edit(callback, f"{_base_text(callback)}{PAID_MARK} {data.paid_date:%d.%m.%Y}{late}", undo_keyboard(occ_id))
     await callback.answer("Уже отмечено ранее" if already else "Отмечено как оплаченное")
 

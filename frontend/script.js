@@ -198,7 +198,7 @@ function invoiceKeeperApp() {
         currency: item.currency,
         periodicity: periodicity === 'one_time' ? 'Разовый' : 'Ежемесячно',
         status: item.is_paid ? 'Одобрено' : 'В ожидании',
-        isOverdue: Boolean(item.is_overdue)
+        isOverdue: Boolean(item.overdue)
       };
     },
 

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, security
 from app.db.models import User
 from app.config import settings
 from app.db.schemas import (
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/auth", tags=["Авторизация"])
 
 @router.post("/login", response_model=AuthResponse)
 async def login(login_data: UserLogin, db: AsyncSession = Depends(get_db)):
-    """Вход по email и паролю."""
+    """Вход по логину (email) и паролю."""
     return await AuthService.authenticate_user(db, login_data)
 
 
@@ -26,8 +27,13 @@ async def get_me(current_user: User = Depends(get_current_user)):
 
 
 @router.post("/logout", response_model=LogoutResponse)
-async def logout(current_user: User = Depends(get_current_user)):
-    """Завершение сессии. Токен stateless: клиент удаляет его у себя."""
+async def logout(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Отзывает текущую серверную сессию."""
+    await AuthService.logout(db, credentials.credentials)
     return LogoutResponse()
 
 

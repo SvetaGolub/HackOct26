@@ -31,15 +31,15 @@ class PaymentOccurrence(Base):
             name="ck_paid_consistency",
         ),
         CheckConstraint("amount > 0", name="ck_occurrence_amount_positive"),
-        Index("ix_occurrence_dept_due", "department_id", "due_date"),
+        Index("ix_occurrence_due_paid", "due_date", "is_paid"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     recurring_payment_id: Mapped[int] = mapped_column(
-        ForeignKey("recurring_payments.id", ondelete="CASCADE"), nullable=False, index=True
+        ForeignKey("recurring_payments.id", ondelete="RESTRICT"), nullable=False, index=True
     )
-    department_id: Mapped[int] = mapped_column(
-        ForeignKey("departments.id", ondelete="RESTRICT"), nullable=False, index=True
+    department_id: Mapped[int | None] = mapped_column(
+        ForeignKey("departments.id", ondelete="RESTRICT"), nullable=True, index=True
     )
 
     # Снимок названия, суммы и валюты на момент создания периода:
@@ -48,17 +48,11 @@ class PaymentOccurrence(Base):
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     currency: Mapped[Currency] = mapped_column(str_enum(Currency, 3), nullable=False)
 
-    # period: первое число месяца периода (неизменяемый ключ)
-    # original_due_date: срок по расписанию, due_date: текущий (бухгалтер может перенести)
+    # period: первое число месяца; due_date: срок оплаты для этого периода.
     period: Mapped[date] = mapped_column(Date, nullable=False)
-    original_due_date: Mapped[date] = mapped_column(Date, nullable=False)
-    due_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
-    rescheduled_by: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
-    )
-    reschedule_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    due_date: Mapped[date] = mapped_column(Date, nullable=False)
 
-    is_paid: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    is_paid: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     paid_date: Mapped[date | None] = mapped_column(Date, nullable=True)  # при отмене оплаты NULL
     paid_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True

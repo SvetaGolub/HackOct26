@@ -6,15 +6,14 @@ from sqlalchemy import and_, case, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models import PaymentOccurrence, RecurringPayment, ReminderLog, User
+from app.db.models import Department, PaymentOccurrence, RecurringPayment, User
 from app.db.models.enum import Currency, UserRole
 from app.db.schemas import (
     CurrencySummary, OccurrenceData, OccurrenceStatusFilter, OccurrenceUpdate,
     RecurringPaymentCreate,
 )
 from app.db.schemas.access import (
-    can_access_department, forbidden, is_staff, not_found, require_roles,
-    resolve_department, scope_department,
+    forbidden, is_admin, not_found, require_roles,
 )
 from app.db.services.audit_service import AuditService
 from app.db.services.schedule import ensure_occurrences, today_local
@@ -36,7 +35,17 @@ class PaymentService:
     async def create_recurring(cls, db: AsyncSession, payload: RecurringPaymentCreate, actor: User) -> RecurringPayment:
         """Создание регулярного платежа напрямую: администратор (любой отдел) или бухгалтер (свой)."""
         require_roles(actor, UserRole.ADMIN, UserRole.ACCOUNTANT)
-        department_id = await resolve_department(db, actor, payload.department_id)
+        if is_admin(actor):
+            department_id = payload.department_id
+            if department_id is not None:
+                if await db.get(Department, department_id) is None:
+                    raise HTTPException(status_code=404, detail="Отдел не найден")
+        else:
+            department_id = actor.department_id
+            if department_id is None:
+                raise HTTPException(status_code=400, detail="Пользователь не привязан к отделу")
+            if payload.department_id is not None and payload.department_id != department_id:
+                raise forbidden("Нельзя действовать в чужом отделе")
 
         rp = RecurringPayment(
             title=payload.title.strip(),
@@ -66,7 +75,9 @@ class PaymentService:
         db: AsyncSession, actor: User, department_id: int | None = None,
         include_inactive: bool = False, limit: int = 100, offset: int = 0,
     ) -> list[RecurringPayment]:
-        stmt = scope_department(select(RecurringPayment), RecurringPayment, actor, department_id)
+        stmt = select(RecurringPayment)
+        if department_id is not None:
+            stmt = stmt.where(RecurringPayment.department_id == department_id)
         if not include_inactive:
             stmt = stmt.where(RecurringPayment.is_active.is_(True))
         stmt = stmt.order_by(RecurringPayment.id).limit(limit).offset(offset)
@@ -95,7 +106,7 @@ class PaymentService:
             delete(PaymentOccurrence).where(
                 PaymentOccurrence.recurring_payment_id == rp.id,
                 PaymentOccurrence.is_paid.is_(False),
-                PaymentOccurrence.due_date >= today,
+                PaymentOccurrence.due_date > today,
             )
         )
         AuditService.record(
@@ -119,7 +130,9 @@ class PaymentService:
     ) -> list[OccurrenceData]:
         today = today_local()
         O = PaymentOccurrence
-        stmt = scope_department(select(O), O, actor, department_id)
+        stmt = select(O)
+        if department_id is not None:
+            stmt = stmt.where(O.department_id == department_id)
         if status == OccurrenceStatusFilter.PAID:
             stmt = stmt.where(O.is_paid.is_(True))
         elif status == OccurrenceStatusFilter.UNPAID:
@@ -146,8 +159,7 @@ class PaymentService:
         if for_update:
             stmt = stmt.with_for_update()
         occ = (await db.execute(stmt)).scalar_one_or_none()
-        # чужой отдел неотличим от несуществующего объекта
-        if occ is None or not can_access_department(actor, occ.department_id):
+        if occ is None:
             raise not_found("Платёж не найден")
         return occ
 
@@ -160,17 +172,11 @@ class PaymentService:
     async def update_occurrence(
         cls, db: AsyncSession, occurrence_id: int, payload: OccurrenceUpdate, actor: User
     ) -> OccurrenceData:
-        """Отметка/отмена оплаты, исправление фактической даты, перенос срока.
+        """Отметка или отмена оплаты, исправление фактической даты.
 
-        Права: оплата и фактическая дата доступны всем ролям в пределах своего отдела;
-        перенос срока (due_date) только бухгалтеру и админу. Проверки здесь, а не в роутере,
-        поэтому они действуют для любого клиента API.
+        Дата оплаты доступна всем авторизованным ролям.
         """
-        if payload.due_date is not None and not is_staff(actor):
-            raise forbidden("Переносить срок может только бухгалтер")
-
         occ = await cls._load_occurrence(db, occurrence_id, actor, for_update=True)
-        rp = occ.recurring_payment
         today = today_local()
         dept = occ.department_id
         changed = False
@@ -185,6 +191,7 @@ class PaymentService:
         if payload.is_paid is False:
             if occ.is_paid:
                 audit("unmark_paid", {"is_paid": True, "paid_date": occ.paid_date}, {"is_paid": False, "paid_date": None})
+            if occ.is_paid or occ.paid_date is not None or occ.paid_by is not None:
                 occ.is_paid, occ.paid_date, occ.paid_by = False, None, None
                 changed = True
         elif payload.is_paid is True or payload.paid_date is not None:
@@ -192,7 +199,7 @@ class PaymentService:
                 raise HTTPException(status_code=400, detail="Нельзя указать дату оплаты для неоплаченного периода")
             new_date = payload.paid_date or (occ.paid_date if occ.is_paid else today)
             if new_date > today:
-                raise HTTPException(status_code=400, detail="Дата оплаты не может быть в будущем")
+                raise HTTPException(status_code=422, detail="Дата оплаты не может быть в будущем")
             if not occ.is_paid:
                 audit("mark_paid", {"is_paid": False, "paid_date": None}, {"is_paid": True, "paid_date": new_date})
                 occ.is_paid, occ.paid_date, occ.paid_by = True, new_date, actor.id
@@ -201,23 +208,6 @@ class PaymentService:
                 audit("fix_paid_date", {"paid_date": occ.paid_date}, {"paid_date": new_date})
                 occ.paid_date = new_date  # срок не меняется, просрочка пересчитывается сама
                 changed = True
-
-        # --- перенос срока ---
-        if payload.due_date is not None and payload.due_date != occ.due_date:
-            if not rp.is_active:
-                raise HTTPException(status_code=409, detail="Платёж прекращён, срок переносить нельзя")
-            reason = payload.reschedule_reason.strip()
-            audit(
-                "reschedule",
-                {"due_date": occ.due_date, "reschedule_reason": occ.reschedule_reason},
-                {"due_date": payload.due_date, "reschedule_reason": reason},
-            )
-            occ.due_date = payload.due_date
-            occ.rescheduled_by = actor.id
-            occ.reschedule_reason = reason
-            # новый срок: напоминание должно прийти заново
-            await db.execute(delete(ReminderLog).where(ReminderLog.occurrence_id == occ.id))
-            changed = True
 
         if changed:
             await db.commit()
@@ -234,15 +224,17 @@ class PaymentService:
         """
         today = today_local()
         O = PaymentOccurrence
-        stmt = scope_department(
+        stmt = (
             select(
                 O.currency,
                 func.coalesce(func.sum(case((O.is_paid.is_(True), O.amount), else_=0)), 0),
                 func.coalesce(func.sum(case((O.is_paid.is_(False), O.amount), else_=0)), 0),
                 func.coalesce(func.sum(case((and_(O.is_paid.is_(False), O.due_date < today), O.amount), else_=0)), 0),
-            ),
-            O, actor, department_id,
-        ).group_by(O.currency)
+            )
+        )
+        if department_id is not None:
+            stmt = stmt.where(O.department_id == department_id)
+        stmt = stmt.group_by(O.currency)
         found = {row[0]: row for row in (await db.execute(stmt)).all()}
 
         result = []

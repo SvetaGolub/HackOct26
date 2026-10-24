@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from uuid import uuid4
 
 import jwt
 from fastapi import HTTPException
@@ -8,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.db.models import User
+from app.db.models import AuthSession, User
 from app.db.models.enum import UserRole
 from app.db.schemas import AuthResponse, UserData, UserLogin
 
@@ -29,7 +30,7 @@ class AuthService:
         to_encode = data.copy()
         minutes = settings.ACCESS_TOKEN_EXPIRE_MINUTES
         expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=minutes))
-        to_encode.update({"exp": expire})
+        to_encode.update({"exp": expire, "jti": str(uuid4())})
         return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.JWT_ALGORITHM)
 
     @classmethod
@@ -41,6 +42,13 @@ class AuthService:
             )
         # Роль в токен не кладём: актуальную роль всегда берём из БД
         token = cls.create_access_token({"sub": str(user.id)})
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.JWT_ALGORITHM])
+        db.add(AuthSession(
+            user_id=user.id,
+            jti=payload["jti"],
+            expires_at=datetime.fromtimestamp(payload["exp"], timezone.utc),
+        ))
+        await db.commit()
         return AuthResponse(success=True, user=UserData.model_validate(user), accessToken=token)
 
     @classmethod
@@ -52,12 +60,34 @@ class AuthService:
         try:
             payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.JWT_ALGORITHM])
             user_id = int(payload["sub"])
+            jti = payload["jti"]
         except (jwt.PyJWTError, KeyError, ValueError):
+            raise credentials_error
+        session = (await db.execute(
+            select(AuthSession).where(
+                AuthSession.jti == jti,
+                AuthSession.user_id == user_id,
+                AuthSession.revoked_at.is_(None),
+                AuthSession.expires_at > datetime.now(timezone.utc),
+            )
+        )).scalar_one_or_none()
+        if session is None:
             raise credentials_error
         user = await db.get(User, user_id)
         if user is None:  # пользователя удалили: токен больше не действует
             raise credentials_error
         return user
+
+    @staticmethod
+    async def logout(db: AsyncSession, token: str) -> None:
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.JWT_ALGORITHM])
+        session = (await db.execute(
+            select(AuthSession).where(AuthSession.jti == payload["jti"])
+        )).scalar_one_or_none()
+        if session is None:
+            raise HTTPException(status_code=401, detail="Сессия не найдена")
+        session.revoked_at = datetime.now(timezone.utc)
+        await db.commit()
 
     @classmethod
     async def ensure_system_admin(cls, db: AsyncSession) -> None:

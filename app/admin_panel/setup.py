@@ -44,6 +44,7 @@ class RecurringPaymentAdmin(ModelView, model=RecurringPayment):
     column_list = [RecurringPayment.id, RecurringPayment.title, RecurringPayment.amount,
                    RecurringPayment.currency, RecurringPayment.is_active]
     can_create = False
+    can_delete = False
 
 
 class OccurrenceAdmin(ModelView, model=PaymentOccurrence):
