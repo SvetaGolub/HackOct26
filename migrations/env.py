@@ -56,6 +56,9 @@ async def run_migrations_online() -> None:
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
+        # Без commit версия в alembic_version откатывается (async + SQLAlchemy),
+        # а DDL в MySQL уже мог примениться — схема и ревизия разъезжаются.
+        await connection.commit()
 
     await connectable.dispose()
 

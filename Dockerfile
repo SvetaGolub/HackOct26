@@ -21,4 +21,4 @@ COPY migrations ./migrations
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "python -m alembic upgrade head && python -m app.main"]
+CMD ["sh", "-c", "python -m alembic upgrade head && python -m alembic current && python -m app.main"]
