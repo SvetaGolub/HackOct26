@@ -1,33 +1,26 @@
 services:
   db:
-    image: mysql:8.4
-    restart: unless-stopped
+    image: mysql:8
+    restart: always
     environment:
-      MYSQL_DATABASE: ${DB_NAME:-HackOct}
-      MYSQL_USER: ${DB_USER:-hack}
-      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: HackOct
+      MYSQL_USER: hack
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     volumes:
       - dbdata:/var/lib/mysql
     healthcheck:
-      test: [ "CMD-SHELL", "mysqladmin ping --host=127.0.0.1 --user=root --password=\"$${MYSQL_ROOT_PASSWORD}\" --silent" ]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 5s
-      timeout: 5s
       retries: 20
-      start_period: 30s
-
   app:
     build: .
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: mysql+aiomysql://${DB_USER:-hack}:${DB_PASSWORD:?Set DB_PASSWORD in .env}@db:3306/${DB_NAME:-HackOct}
+    restart: always
+    env_file: .env
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "${APP_PORT:-8000}:8000"
-
+      - "8000:8000"
 volumes:
   dbdata:
