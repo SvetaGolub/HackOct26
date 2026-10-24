@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import AliasChoices, BaseModel, EmailStr, Field
 
 from app.db.models.enum import UserRole
 from app.db.schemas.department import DepartmentData
@@ -11,7 +11,11 @@ AssignableRole = Literal["user", "accountant"]
 
 class UserLogin(BaseModel):
     """Вход в систему (для всех ролей)."""
-    email: EmailStr = Field(..., description="Электронная почта")
+    email: EmailStr = Field(
+        ...,
+        validation_alias=AliasChoices("login", "email"),
+        description="Логин (email)",
+    )
     # Нижней границы длины нет намеренно: пароль админа из .env может быть коротким
     password: str = Field(..., min_length=1, max_length=128, description="Пароль")
 
@@ -20,9 +24,9 @@ class UserCreate(BaseModel):
     """Создание пользователя или бухгалтера администратором."""
     email: EmailStr
     password: str = Field(..., min_length=6, max_length=128)
-    full_name: str = Field(..., min_length=1, max_length=255)
+    full_name: str | None = Field(default=None, min_length=1, max_length=255)
     role: AssignableRole = "user"
-    department_id: int = Field(..., description="ID отдела")
+    department_id: int | None = Field(default=None, description="ID отдела")
     telegram_id: int | None = Field(default=None, description="Telegram ID для напоминаний")
 
 

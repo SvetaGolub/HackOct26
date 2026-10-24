@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.db.models.enum import Currency, Periodicity
-from app.db.models.payment_occurrence import overdue
+from app.db.models.payment_occurrence import PaymentOccurrence, overdue
 from app.db.schemas.payments import OccurrenceUpdate
 from app.db.services import schedule
 
@@ -46,6 +46,15 @@ class _Session:
         pass
 
 
+class _LastPeriodSession(_Session):
+    def __init__(self, period):
+        super().__init__()
+        self.period = period
+
+    async def execute(self, _statement):
+        return _LastPeriodResult(self.period)
+
+
 def _recurring_payment(periodicity):
     return SimpleNamespace(
         id=1,
@@ -60,7 +69,7 @@ def _recurring_payment(periodicity):
     )
 
 
-def test_schedule_keeps_anchor_day_after_february():
+def test_schedule_creates_first_and_next_period_with_anchor_day():
     db = _Session()
 
     asyncio.run(
@@ -72,13 +81,49 @@ def test_schedule_keeps_anchor_day_after_february():
     assert [occ.due_date for occ in db.added] == [
         date(2024, 1, 31),
         date(2024, 2, 29),
-        date(2024, 3, 31),
     ]
     assert [occ.period for occ in db.added] == [
         date(2024, 1, 1),
         date(2024, 2, 1),
+    ]
+
+
+def test_schedule_creates_first_two_periods_even_when_due_date_is_far_ahead():
+    db = _Session()
+    recurring = _recurring_payment(Periodicity.MONTHLY)
+    recurring.first_due_date = date(2028, 1, 31)
+
+    asyncio.run(
+        schedule.ensure_occurrences(db, recurring, today=date(2024, 2, 1))
+    )
+
+    assert [occ.due_date for occ in db.added] == [
+        date(2028, 1, 31),
+        date(2028, 2, 29),
+    ]
+
+
+def test_schedule_skips_missed_months_and_preserves_anchor_day():
+    db = _LastPeriodSession(date(2024, 2, 1))
+
+    asyncio.run(
+        schedule.ensure_occurrences(
+            db, _recurring_payment(Periodicity.MONTHLY), today=date(2024, 3, 1)
+        )
+    )
+
+    assert [occ.due_date for occ in db.added] == [date(2024, 3, 31)]
+    assert [occ.period for occ in db.added] == [
         date(2024, 3, 1),
     ]
+
+
+class _LastPeriodResult:
+    def __init__(self, period):
+        self.period = period
+
+    def scalar_one_or_none(self):
+        return self.period
 
 
 def test_one_time_payment_creates_only_one_occurrence():
@@ -113,21 +158,31 @@ def test_occurrence_update_requires_a_change():
         OccurrenceUpdate()
 
 
-def test_rescheduling_requires_a_reason():
+def test_occurrence_patch_does_not_allow_rescheduling():
     with pytest.raises(ValueError):
         OccurrenceUpdate(due_date=date(2024, 2, 1))
 
-    update = OccurrenceUpdate(
-        due_date=date(2024, 2, 1), reschedule_reason="Invoice delayed"
-    )
-    assert update.due_date == date(2024, 2, 1)
 
-
-def test_payment_cancellation_cannot_include_paid_date():
-    with pytest.raises(ValueError):
-        OccurrenceUpdate(is_paid=False, paid_date=date(2024, 1, 1))
+def test_payment_cancellation_clears_date_even_if_provided():
+    update = OccurrenceUpdate(is_paid=False, paid_date=date(2024, 1, 1))
+    assert update.is_paid is False
 
 
 def test_occurrence_update_rejects_unknown_fields():
     with pytest.raises(ValueError):
         OccurrenceUpdate(is_paid=True, unknown=True)
+
+
+def test_occurrence_history_is_restricted_from_cascade_delete():
+    foreign_key = next(
+        iter(PaymentOccurrence.__table__.c.recurring_payment_id.foreign_keys)
+    )
+    assert foreign_key.ondelete == "RESTRICT"
+
+
+def test_occurrences_have_due_date_and_payment_status_index():
+    index = next(
+        index for index in PaymentOccurrence.__table__.indexes
+        if index.name == "ix_occurrence_due_paid"
+    )
+    assert [column.name for column in index.columns] == ["due_date", "is_paid"]

@@ -9,6 +9,7 @@ from app.db.models.payment_occurrence import PaymentOccurrence
 from app.db.models.reminder_log import ReminderLog
 from app.db.models.audit_log import AuditLog
 from app.db.models.telegram_link_code import TelegramLinkCode
+from app.db.models.auth_session import AuthSession
 
 __all__ = [
     "Department",
@@ -19,4 +20,5 @@ __all__ = [
     "ReminderLog",
     "AuditLog",
     "TelegramLinkCode",
+    "AuthSession",
 ]

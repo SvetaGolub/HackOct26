@@ -39,8 +39,8 @@ class RecurringPayment(Base):
     anchor_day: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # Отдел, которому принадлежит платёж (граница видимости)
-    department_id: Mapped[int] = mapped_column(
-        ForeignKey("departments.id", ondelete="RESTRICT"), nullable=False, index=True
+    department_id: Mapped[int | None] = mapped_column(
+        ForeignKey("departments.id", ondelete="RESTRICT"), nullable=True, index=True
     )
 
     # Мягкое удаление: история сохраняется, напоминания прекращаются

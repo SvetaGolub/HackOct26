@@ -176,8 +176,9 @@ def test_login_me_and_department_role_boundaries(test_database):
 
             admin_login = await client.post(
                 "/api/v1/auth/login",
-                json={"email": "admin@example.com", "password": "AdminPass123"},
+                json={"login": "admin@example.com", "password": "AdminPass123"},
             )
+            assert admin_login.status_code == 200
             admin_headers = {
                 "Authorization": f"Bearer {admin_login.json()['accessToken']}"
             }
@@ -185,5 +186,78 @@ def test_login_me_and_department_role_boundaries(test_database):
                 "/api/v1/departments", headers=admin_headers
             )
             assert {item["name"] for item in all_departments.json()} == {"Alpha", "Beta"}
+
+            new_user = await client.post(
+                "/api/v1/users",
+                headers=admin_headers,
+                json={"email": "new@example.com", "password": "NewPass123"},
+            )
+            assert new_user.status_code == 201
+            assert new_user.json()["full_name"] == "new@example.com"
+            assert new_user.json()["department_id"] is None
+
+            global_payment = await client.post(
+                "/api/v1/recurring-payments",
+                headers=admin_headers,
+                json={
+                    "title": "Shared subscription",
+                    "amount": "12.50",
+                    "currency": "EUR",
+                    "first_due_date": "2026-11-01",
+                    "periodicity": "monthly",
+                },
+            )
+            assert global_payment.status_code == 201
+            assert global_payment.json()["department_id"] is None
+
+            employee_payments = await client.get(
+                "/api/v1/recurring-payments", headers=auth_headers
+            )
+            assert global_payment.json()["id"] in {
+                payment["id"] for payment in employee_payments.json()
+            }
+            employee_occurrences = await client.get(
+                "/api/v1/payment-occurrences", headers=auth_headers
+            )
+            global_occurrence = next(
+                occurrence for occurrence in employee_occurrences.json()
+                if occurrence["recurring_payment_id"] == global_payment.json()["id"]
+            )
+            assert "overdue" in global_occurrence
+            occurrence_url = (
+                f"/api/v1/payment-occurrences/{global_occurrence['id']}"
+            )
+            mark_paid = await client.patch(
+                occurrence_url, headers=auth_headers, json={"is_paid": True}
+            )
+            assert mark_paid.status_code == 200
+            assert mark_paid.json()["paid_date"] is not None
+
+            unmark_paid = await client.patch(
+                occurrence_url,
+                headers=auth_headers,
+                json={"is_paid": False, "paid_date": "2026-10-01"},
+            )
+            assert unmark_paid.status_code == 200
+            assert unmark_paid.json()["paid_date"] is None
+
+            future_payment = await client.patch(
+                occurrence_url,
+                headers=auth_headers,
+                json={"is_paid": True, "paid_date": "2099-01-01"},
+            )
+            assert future_payment.status_code == 422
+            reschedule = await client.patch(
+                occurrence_url,
+                headers=auth_headers,
+                json={"due_date": "2026-12-01"},
+            )
+            assert reschedule.status_code == 422
+
+            logout = await client.post("/api/v1/auth/logout", headers=auth_headers)
+            assert logout.status_code == 200
+            assert (
+                await client.get("/api/v1/auth/me", headers=auth_headers)
+            ).status_code == 401
 
     asyncio.run(scenario())

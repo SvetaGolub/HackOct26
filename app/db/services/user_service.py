@@ -39,7 +39,7 @@ class UserService:
     @staticmethod
     async def _require_department(db: AsyncSession, department_id: int | None) -> None:
         if department_id is None:
-            raise HTTPException(status_code=400, detail="Для пользователя и бухгалтера нужен отдел")
+            return
         if await db.get(Department, department_id) is None:
             raise HTTPException(status_code=404, detail="Отдел не найден")
 
@@ -65,7 +65,7 @@ class UserService:
         user = User(
             email=payload.email,
             password_hash=AuthService.get_password_hash(payload.password),
-            full_name=payload.full_name,
+            full_name=payload.full_name or str(payload.email),
             role=role,
             department_id=payload.department_id,
             telegram_id=payload.telegram_id,

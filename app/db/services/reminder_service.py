@@ -1,5 +1,4 @@
 import logging
-from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Awaitable, Callable
@@ -67,21 +66,18 @@ class ReminderService:
                 select(ReminderLog).where(ReminderLog.occurrence_id.in_([o.id for o in occs]))
             )).scalars().all()
         }
-        users_by_dept: dict[int, list[User]] = defaultdict(list)
-        users = (await db.execute(
-            select(User).where(
-                User.telegram_id.is_not(None),
-                User.department_id.in_({o.department_id for o in occs}),
-            )
-        )).scalars().all()
-        for u in users:
-            users_by_dept[u.department_id].append(u)
+        department_ids = {o.department_id for o in occs if o.department_id is not None}
+        users_stmt = select(User).where(User.telegram_id.is_not(None))
+        if department_ids and not any(o.department_id is None for o in occs):
+            users_stmt = users_stmt.where(User.department_id.in_(department_ids))
+        users = (await db.execute(users_stmt)).scalars().all()
 
         return [
             Reminder(occ.id, u.id, u.telegram_id, format_message(occ))
             for occ in occs
-            for u in users_by_dept.get(occ.department_id, [])
-            if (occ.id, u.id) not in sent
+            for u in users
+            if (occ.department_id is None or occ.department_id == u.department_id)
+            and (occ.id, u.id) not in sent
         ]
 
     @staticmethod

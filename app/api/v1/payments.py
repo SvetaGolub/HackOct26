@@ -18,7 +18,7 @@ router = APIRouter(tags=["Платежи"])
 
 @router.get("/recurring-payments", response_model=list[RecurringPaymentData])
 async def list_recurring(
-    department_id: int | None = Query(None, description="Фильтр по отделу (для не-админа игнорируется)"),
+    department_id: int | None = Query(None, description="Необязательный фильтр по отделу"),
     include_inactive: bool = False,
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
@@ -74,7 +74,7 @@ async def update_occurrence(
     occurrence_id: int, data: OccurrenceUpdate,
     db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user),
 ):
-    """Отметка/отмена оплаты, фактическая дата; перенос срока (due_date) только бухгалтер и админ."""
+    """Отметка или отмена оплаты и исправление фактической даты."""
     return await PaymentService.update_occurrence(db, occurrence_id, data, user)
 
 
