@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice Keeper — Панель управления платежами</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="script.js"></script>
+</head>
+<body x-data="invoiceKeeperApp()" :data-theme="theme">
+
+  <!-- ВЕРХНЯЯ ШАПКА -->
+  <header class="app-header">
+    <div class="header-left">
+      <span class="brand-logo">Invoice Keeper</span>
+      <span class="header-divider"></span>
+      <span class="system-subtitle">Invoice Keeper • Регулярные платежи</span>
+    </div>
+
+    <!-- ИТОГИ ПО 3 ВАЛЮТАМ (ОТДЕЛЬНО RUB, USD, EUR БЕЗ КОНВЕРТАЦИИ) -->
+    <div class="currency-summary-strip">
+      <div class="summary-chip">
+        <span class="chip-label">RUB:</span>
+        <strong class="chip-val" x-text="formatMoney(summaryByCurrency('RUB'), 'RUB')"></strong>
+      </div>
+      <div class="summary-chip">
+        <span class="chip-label">USD:</span>
+        <strong class="chip-val" x-text="formatMoney(summaryByCurrency('USD'), 'USD')"></strong>
+      </div>
+      <div class="summary-chip">
+        <span class="chip-label">EUR:</span>
+        <strong class="chip-val" x-text="formatMoney(summaryByCurrency('EUR'), 'EUR')"></strong>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <span class="system-subtitle" x-show="currentUser" x-text="currentUser?.full_name"></span>
+      <button type="button" class="btn btn-secondary" x-show="currentUser" @click="logout()">Выйти</button>
+      <div class="currency-selector">
+        <label for="defaultCurrencySelect">Валюта по умолч.:</label>
+        <select id="defaultCurrencySelect" x-model="defaultCurrency" class="field-select compact">
+          <option value="RUB">RUB (₽)</option>
+          <option value="USD">USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+        </select>
+      </div>
+
+      <!-- Кнопка изменения темы фиксированного размера -->
+      <button type="button" class="theme-toggle-fixed" @click="toggleTheme()" title="Переключить тему">
+        <span class="theme-circle"></span>
+        <span class="theme-text" x-text="theme === 'light' ? 'Темная' : 'Светлая'"></span>
+      </button>
+
+      <button type="button" class="btn btn-primary" x-show="canManageRecurring" @click="openDayModal(selectedDateISO)">+ Создать запись</button>
+    </div>
+  </header>
+
+  <!-- ОСНОВНАЯ СЕТКА -->
+  <main class="dashboard-layout">
+    
+    <!-- ЛЕВАЯ КОЛОНКА: КАЛЕНДАРЬ + ТАБЛИЦА -->
+    <section class="primary-column">
+      
+      <!-- КАЛЕНДАРЬ НА 2 НЕДЕЛИ -->
+      <div class="card calendar-card">
+        <div class="card-header">
+          <div class="calendar-title-wrap">
+            <span class="section-title">Календарь оплат (2 недели)</span>
+            <span class="period-label" x-text="periodLabel"></span>
+          </div>
+          <div class="calendar-arrows">
+            <button type="button" class="arrow-btn" @click="shiftWeeks(-14)" title="Предыдущие 2 недели">←</button>
+            <button type="button" class="arrow-btn" @click="shiftWeeks(14)" title="Следующие 2 недели">→</button>
+          </div>
+        </div>
+
+        <!-- Сокращенные названия дней недели выше первой строки ячеек -->
+        <div class="weekdays-row">
+          <template x-for="(dayName, idx) in weekdays" :key="idx">
+            <div class="weekday-label" :class="{ 'weekend': idx >= 5 }" x-text="dayName"></div>
+          </template>
+        </div>
+
+        <!-- 14 ячеек календаря -->
+        <div class="calendar-grid">
+          <template x-for="day in calendarDays" :key="day.iso">
+            <div class="calendar-cell" @click="openDayModal(day.iso)">
+              <div class="cell-header">
+                <span class="tg-mini-tag" x-show="hasTelegramReminderSoon(day.iso)" title="Напоминание в Telegram за 3 дня до срока">TG</span>
+                <span class="cell-date" x-text="day.displayDate"></span>
+              </div>
+
+              <!-- Закругленные прямоугольники с мелким названием отдела -->
+              <div class="cell-badges">
+                <template x-for="rec in getRecordsByDate(day.iso)" :key="rec.id">
+                  <span class="dept-rect" :class="statusColor(rec)" x-text="rec.department"></span>
+                </template>
+              </div>
+
+              <!-- Всплывающий список и итоги по валютам при наведении на ячейку -->
+              <div class="cell-hover-popover" x-show="getRecordsByDate(day.iso).length > 0">
+                <div class="popover-title" x-text="'Платежи на ' + day.displayDate"></div>
+                <ul class="popover-list">
+                  <template x-for="rec in getRecordsByDate(day.iso)" :key="rec.id">
+                    <li class="popover-item">
+                      <span class="popover-dept" x-text="rec.department"></span>
+                      <span class="popover-emp" x-text="rec.description"></span>
+                      <strong class="popover-sum" x-text="formatMoney(rec.amount, rec.currency)"></strong>
+                    </li>
+                  </template>
+                </ul>
+                <div class="popover-totals" x-text="getDayTotalsString(day.iso)"></div>
+                <div class="popover-hint">Кликните по ячейке для создания или удаления</div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- ТАБЛИЦА РЕЕСТРА -->
+      <div class="card table-card">
+        <div class="card-header">
+          <div>
+            <span class="section-title">Реестр периодических платежей</span>
+            <span class="sub-hint">Исправление фактической даты оплаты автоматически пересчитывает просрочку</span>
+          </div>
+          <span class="counter-badge" x-text="'Записей: ' + filteredTableRecords.length"></span>
+        </div>
+
+        <!-- Поисковая система с кнопкой Фильтр -->
+        <div class="search-bar-row">
+          <input type="text" class="field-input" placeholder="Поиск по описанию, отделу, сотруднику..." x-model="tableSearch">
+          <button type="button" class="btn btn-secondary" @click="showTableFilter = !showTableFilter">Фильтр</button>
+          <button type="button" class="btn btn-text" @click="resetTableFilters()">Сбросить</button>
+        </div>
+
+        <div class="filter-panel" x-show="showTableFilter" x-transition>
+          <div class="filter-grid">
+            <div>
+              <label>Отдел</label>
+              <select class="field-select" x-model="tableDeptFilter">
+                <option value="">Все отделы</option>
+                <template x-for="d in departments" :key="d">
+                  <option :value="d" x-text="d"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label>Статус</label>
+              <select class="field-select" x-model="tableStatusFilter">
+                <option value="">Все статусы</option>
+                <option value="Одобрено">Одобрено (Оплачено)</option>
+                <option value="В ожидании">В ожидании (Не оплачено)</option>
+                <option value="Отказано">Отказано / Просрочка</option>
+              </select>
+            </div>
+            <div>
+              <label>Валюта</label>
+              <select class="field-select" x-model="tableCurrencyFilter">
+                <option value="">Все валюты</option>
+                <option value="RUB">RUB (₽)</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Таблица: строгий порядок колонок (Описание, Отделы, Сотрудники, Платеж, Статус) + метаданные кейса -->
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 28%;">Описание</th>
+                <th style="width: 15%;">Отделы</th>
+                <th style="width: 18%;">Ответственный</th>
+                <th style="width: 14%;">Платеж</th>
+                <th style="width: 25%;">Статус и фактическая дата</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="item in filteredTableRecords" :key="item.id">
+                <tr>
+                  <td>
+                    <div class="desc-main" x-text="item.description"></div>
+                    <div class="desc-meta">
+                      <span x-text="'Срок: ' + formatReadableDate(item.dueDate)"></span> •
+                      <span x-text="item.periodicity"></span>
+                      <span class="overdue-tag" x-show="isOverdue(item)">ПРОСРОЧКА</span>
+                      <span class="ontime-tag" x-show="item.status === 'Одобрено' && !isOverdue(item)">ВОВРЕМЯ</span>
+                    </div>
+                  </td>
+                  <td x-text="item.department"></td>
+                  <td x-text="item.employee"></td>
+                  <td><strong x-text="formatMoney(item.amount, item.currency)"></strong></td>
+                  <td>
+                    <div class="status-control-group">
+                      <select class="status-select" :class="statusColor(item)" x-model="item.status" @change="onStatusChange(item)">
+                        <option value="Одобрено">Одобрено (Оплачено)</option>
+                        <option value="В ожидании">В ожидании (Не оплачено)</option>
+                        <option value="Отказано">Отказано (Просрочено)</option>
+                      </select>
+                      <div class="actual-date-box">
+                        <label class="tiny-label">Факт. дата оплаты:</label>
+                        <input type="date" class="date-inline-input" :max="referenceTodayISO" x-model="item.paidAt" @change="onActualDateChange(item)" title="Фактическая дата оплаты для пересчета просрочки">
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <div class="empty-state" x-show="filteredTableRecords.length === 0">Записи не найдены</div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ПРАВАЯ КОЛОНКА: СПИСОК ПЛАТЕЖЕЙ / ЖУРНАЛ КАК НА СКРИНШОТЕ -->
+    <aside class="sidebar-column">
+      <div class="journal-panel">
+        <h2 class="journal-heading">Список платежей</h2>
+
+        <!-- Поисковая строка со встроенной кнопкой фильтра как на макете -->
+        <div class="journal-search-box">
+          <input type="text" placeholder="Поиск" x-model="journalSearch">
+          <button type="button" class="journal-filter-btn" @click="cycleJournalFilter()" x-text="journalStatusFilter || 'фильтр'"></button>
+        </div>
+
+        <!-- Карточки платежей -->
+        <div class="journal-cards-container">
+          <template x-for="item in filteredJournalRecords" :key="item.id">
+            <div class="payment-card-item" :class="statusColor(item)">
+              <div class="card-item-top">
+                <span class="card-emp-name" x-text="item.employee"></span>
+                <span class="card-dept-link" x-text="item.department"></span>
+              </div>
+              <div class="card-item-desc" x-text="'Описание: ' + item.description"></div>
+              <div class="card-item-meta">
+                <span x-text="'Срок: ' + formatReadableDate(item.dueDate)"></span>
+                <span x-show="item.paidAt" x-text="'Факт: ' + formatReadableDate(item.paidAt)"></span>
+                <span class="card-overdue-badge" x-show="isOverdue(item)">Просрочка</span>
+              </div>
+              <div class="card-item-bottom">
+                <span class="card-status-pill" :class="statusColor(item)" x-text="item.status"></span>
+                <span class="card-amount-val" x-text="formatMoney(item.amount, item.currency)"></span>
+              </div>
+            </div>
+          </template>
+          <div class="empty-state" x-show="filteredJournalRecords.length === 0">Список пуст</div>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- МОДАЛЬНОЕ ОКНО ПРИ НАЖАТИИ НА ЯЧЕЙКУ (СОЗДАНИЕ ИЛИ УДАЛЕНИЕ ЗАПИСИ) -->
+  <div class="modal-overlay" x-show="isModalOpen" style="display: none;" @click.self="isModalOpen = false">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3 class="modal-title" x-text="'Платежи на ' + formatReadableDate(selectedDateISO)"></h3>
+        <button type="button" class="modal-close" @click="isModalOpen = false">×</button>
+      </div>
+
+      <!-- Список существующих записей в выбранной ячейке -->
+      <div class="day-records-section">
+        <div class="sub-label">Записи на выбранную дату:</div>
+        <template x-if="getRecordsByDate(selectedDateISO).length === 0">
+          <div class="empty-day-notice">На выбранную дату записей нет</div>
+        </template>
+        <ul class="day-records-list">
+          <template x-for="rec in getRecordsByDate(selectedDateISO)" :key="rec.id">
+            <li class="day-record-row">
+              <div class="day-record-info">
+                <strong x-text="rec.department"></strong> — <span x-text="rec.employee"></span>
+                <div class="day-record-sub" x-text="rec.description + ' • ' + formatMoney(rec.amount, rec.currency) + ' (' + rec.periodicity + ')'"></div>
+              </div>
+              <button type="button" class="btn-delete-record" x-show="isAdmin" @click="deleteRecord(rec.id)">Прекратить</button>
+            </li>
+          </template>
+        </ul>
+      </div>
+
+      <hr class="modal-divider">
+
+      <!-- Форма добавления новой записи -->
+      <form @submit.prevent="createRecord()" class="modal-form">
+        <div class="sub-label">Добавить регулярный платеж:</div>
+        <div class="form-field">
+          <label>Описание (название расхода)</label>
+          <input type="text" class="field-input" required x-model="newRec.description" placeholder="Аренда офиса / Оплата сервера / Подписка">
+        </div>
+        <div class="form-field">
+          <label>Отдел</label>
+          <select class="field-select" x-model="newRec.department">
+            <template x-for="d in departments" :key="d">
+              <option :value="d" x-text="d"></option>
+            </template>
+          </select>
+        </div>
+        <div class="form-row-3">
+          <div class="form-field">
+            <label>Сумма</label>
+            <input type="number" class="field-input" required min="1" step="0.01" x-model="newRec.amount">
+          </div>
+          <div class="form-field">
+            <label>Валюта</label>
+            <select class="field-select" x-model="newRec.currency">
+              <option value="RUB">RUB (₽)</option>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Периодичность</label>
+            <select class="field-select" x-model="newRec.periodicity">
+              <option value="monthly">Ежемесячно</option>
+              <option value="one_time">Разовый</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-field">
+            <label>Статус периода</label>
+            <select class="field-select" x-model="newRec.status">
+              <option value="В ожидании">В ожидании (Не оплачено)</option>
+              <option value="Одобрено">Одобрено (Оплачено)</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Фактическая дата оплаты (если оплачено)</label>
+            <input type="date" class="field-input" :max="referenceTodayISO" x-model="newRec.paidAt">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" @click="isModalOpen = false">Закрыть</button>
+          <button type="submit" class="btn btn-primary">Создать запись</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="corporate-footer">
+    <div class="footer-columns">
+      <div class="footer-col">
+        <h4>Invoice Keeper</h4>
+        <p class="footer-text">Панель регулярных платежей компании.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Возможности</h4>
+        <ul>
+          <li>Календарь платежей</li>
+          <li>Отслеживание просрочек</li>
+          <li>Сводка по валютам</li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Поддержка</h4>
+        <ul>
+          <li>Напоминания через Telegram</li>
+          <li>Права доступа по ролям и отделам</li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>API</h4>
+        <p class="footer-text">Регулярные платежи и контроль сроков</p>
+        <p class="footer-text">Swagger: <a href="/api/v1/docs">Документация API</a></p>
+      </div>
+    </div>
+    <div class="footer-bottom-bar">
+      <div class="footer-brand-keys">
+        <span>I</span><span>n</span><span>v</span><span>o</span>
+      </div>
+      <div class="footer-copy">Invoice Keeper</div>
+      <div class="footer-pay-methods">RUB • USD • EUR</div>
+    </div>
+  </footer>
+
+</body>
+</html>
