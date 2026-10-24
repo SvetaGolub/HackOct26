@@ -10,7 +10,7 @@ services:
     volumes:
       - dbdata:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ["CMD-SHELL", "mysqladmin ping --host=127.0.0.1 --user=root --password=\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -26,8 +26,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    expose:
+      - "8000"
+
+  web:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
     ports:
-      - "${APP_PORT:-8000}:8000"
+      - "${WEB_PORT:-80}:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
 
 volumes:
   dbdata:
