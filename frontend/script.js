@@ -65,8 +65,7 @@ function invoiceKeeperApp(pageRole = 'admin') {
       customDays: 7
     },
     isTelegramModalOpen: false,
-    telegramForm: { login: '', code: '' },
-    telegramLinkDetails: null,
+    telegramForm: { code: '' },
     isFullCalendarOpen: false,
     calYear: new Date().getFullYear(),
     calMonth: new Date().getMonth(),
@@ -979,15 +978,13 @@ function invoiceKeeperApp(pageRole = 'admin') {
         this.feedbackForm.request = '';
         this.feedbackForm.amount = '';
         this.isFeedbackModalOpen = false;
-        window.alert('Обращение отправлено администратору.');
+        window.alert('Обращение отправлено администратору в Telegram.');
       } catch (error) {
         this.showError(error);
       }
     },
 
     async openTelegramModal() {
-      this.telegramLinkDetails = null;
-      this.telegramForm.login = '';
       this.telegramForm.code = '';
       this.isTelegramModalOpen = true;
       try {
@@ -999,7 +996,12 @@ function invoiceKeeperApp(pageRole = 'admin') {
 
     async submitTelegram() {
       try {
-        this.telegramLinkDetails = await this.apiRequest('/auth/telegram-link', 'POST', {});
+        await this.apiRequest('/auth/telegram-link', 'POST', {
+          code: this.telegramForm.code.trim().toUpperCase()
+        });
+        this.telegramForm.code = '';
+        this.currentUser = await this.apiRequest('/auth/me');
+        window.alert('Telegram успешно привязан.');
       } catch (error) {
         this.showError(error);
       }
@@ -1009,7 +1011,6 @@ function invoiceKeeperApp(pageRole = 'admin') {
       try {
         await this.apiRequest('/auth/telegram-link', 'DELETE');
         this.currentUser = await this.apiRequest('/auth/me');
-        this.telegramLinkDetails = null;
       } catch (error) {
         this.showError(error);
       }

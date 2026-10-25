@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_USERNAME: str = ""  # для ссылки t.me/<bot>?start=КОД (необязательно)
     # Числовой ID чата или @username канала, куда бот пишет напоминания (ТЗ: «в Telegram-чат»)
     TELEGRAM_CHAT_ID: str = ""
+    # Чаты администраторов для обращений; можно также привязать Telegram в панели
+    ADMIN_TELEGRAM_CHAT_ID: str = ""
     REMINDER_DAYS: int = 3  # ТЗ: минимум за 3 дня до срока
     TIMEZONE: str = "Europe/Moscow"
 

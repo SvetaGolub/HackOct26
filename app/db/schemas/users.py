@@ -55,8 +55,6 @@ class LogoutResponse(BaseModel):
     )
 
 
-class TelegramLinkResponse(BaseModel):
-    """Одноразовый код для привязки Telegram."""
-    code: str = Field(..., description="Код: отправьте боту /start КОД или /link КОД")
-    expires_in: int = Field(..., description="Время жизни кода, секунды")
-    deep_link: str | None = Field(default=None, description="Ссылка t.me (если задан TELEGRAM_BOT_USERNAME)")
+class TelegramLinkComplete(BaseModel):
+    """Код, полученный от бота для привязки Telegram к текущему аккаунту."""
+    code: str = Field(..., min_length=10, max_length=10, pattern=r"^[A-Z0-9]{10}$")

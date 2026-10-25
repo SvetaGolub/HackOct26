@@ -9,7 +9,7 @@ from app.db.schemas.payments import (
 )
 from app.db.schemas.response import ErrorResponse, MessageResponse
 from app.db.schemas.users import (
-    AuthResponse, LogoutResponse, TelegramLinkResponse, UserCreate, UserData, UserLogin, UserUpdate,
+    AuthResponse, LogoutResponse, TelegramLinkComplete, UserCreate, UserData, UserLogin, UserUpdate,
 )
 
 __all__ = [
@@ -19,5 +19,6 @@ __all__ = [
     "CurrencySummary", "OccurrenceData", "OccurrenceStatusFilter", "OccurrenceUpdate", "ReceiptData",
     "RecurringPaymentCreate", "RecurringPaymentData", "RecurringPaymentUpdate",
     "ErrorResponse", "MessageResponse",
-    "AuthResponse", "LogoutResponse", "TelegramLinkResponse", "UserCreate", "UserData", "UserLogin", "UserUpdate",
+    "AuthResponse", "LogoutResponse", "TelegramLinkComplete", "UserCreate", "UserData",
+    "UserLogin", "UserUpdate",
 ]

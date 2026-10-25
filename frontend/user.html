@@ -620,13 +620,10 @@
         <div class="tg-linked-note" x-show="telegramLinked">
           Подключен аккаунт <strong x-text="'@' + telegramLogin"></strong>
         </div>
+        <p>Отправьте боту команду <code>/link</code>. Введите полученный код здесь в течение 10 минут.</p>
         <div class="form-field">
-          <label>Логин в Telegram</label>
-          <input type="text" class="field-input" required x-model="telegramForm.login" placeholder="@username" autocomplete="off">
-        </div>
-        <div class="form-field">
-          <label>Код</label>
-          <input type="text" class="field-input" required x-model="telegramForm.code" placeholder="Код из Telegram-бота" autocomplete="off">
+          <label for="telegram-link-code">Код из бота</label>
+          <input id="telegram-link-code" type="text" class="field-input" required x-model="telegramForm.code" placeholder="10 символов" minlength="10" maxlength="10" autocomplete="one-time-code" autocapitalize="characters">
         </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-delete-tg" x-show="telegramLinked" @click="disconnectTelegram()">Отключить</button>

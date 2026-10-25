@@ -17,25 +17,31 @@ router.message.filter(F.chat.type == "private")
 HELP = (
     "Привет! Я напоминаю о регулярных платежах.\n\n"
     "Как привязать аккаунт:\n"
-    "1. Войдите в панель и нажмите «Привязать Telegram» (получите одноразовый код).\n"
-    "2. Отправьте мне: /link КОД\n\n"
+    "1. Отправьте мне /link — я пришлю одноразовый код.\n"
+    "2. Войдите в панель, нажмите «Привязать Telegram» и введите код.\n\n"
     "Отвязать аккаунт: /unlink"
 )
 
 
-async def _link(message: Message, code: str) -> None:
+async def _issue_link_code(message: Message) -> None:
     async with async_session_maker() as db:
-        user = await TelegramLinkService.consume(db, code, message.from_user.id)
-    if user is None:
-        await message.answer("Код неверный или истёк. Получите новый код в панели.")
-        return
-    await message.answer(f"Готово, {user.full_name}! Напоминания о платежах будут приходить сюда.")
+        code, ttl = await TelegramLinkService.create_code(db, message.from_user.id)
+    minutes = ttl // 60
+    await message.answer(
+        f"Код привязки: {code}\n"
+        f"Введите его на сайте в разделе «Подключить Telegram». "
+        f"Код действует {minutes} минут и используется один раз."
+    )
+
+
+async def _deprecated_link_code(message: Message) -> None:
+    await message.answer("Теперь код выдаю я. Отправьте /link без кода, затем введите код на сайте.")
 
 
 @router.message(CommandStart(deep_link=True))
-async def start_with_code(message: Message, command: CommandObject):
-    """Переход по ссылке t.me/<bot>?start=<код>."""
-    await _link(message, command.args)
+async def start_with_code(message: Message):
+    """Старые ссылки больше не привязывают аккаунт небезопасным обратным потоком."""
+    await message.answer(HELP)
 
 
 @router.message(CommandStart())
@@ -45,10 +51,10 @@ async def start(message: Message):
 
 @router.message(Command("link"))
 async def link(message: Message, command: CommandObject):
-    if not command.args:
-        await message.answer("Укажите код из панели: /link КОД")
+    if command.args:
+        await _deprecated_link_code(message)
         return
-    await _link(message, command.args.strip())
+    await _issue_link_code(message)
 
 
 @router.message(Command("unlink"))
@@ -95,7 +101,7 @@ async def mark_paid(callback: CallbackQuery):
     async with async_session_maker() as db:
         user = await TelegramLinkService.get_user_by_telegram_id(db, callback.from_user.id)
         if user is None:
-            await callback.answer("Аккаунт не привязан. Получите код в панели и отправьте /link КОД",
+            await callback.answer("Аккаунт не привязан. Отправьте боту /link, затем введите код на сайте.",
                                   show_alert=True)
             return
         try:

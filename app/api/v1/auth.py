@@ -1,12 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, security
 from app.db.models import User
-from app.config import settings
 from app.db.schemas import (
-    AuthResponse, LogoutResponse, MessageResponse, TelegramLinkResponse, UserData, UserLogin,
+    AuthResponse, LogoutResponse, MessageResponse, TelegramLinkComplete, UserData, UserLogin,
 )
 from app.db.services import AuthService, TelegramLinkService
 from app.db.session import get_db
@@ -37,13 +36,17 @@ async def logout(
     return LogoutResponse()
 
 
-@router.post("/telegram-link", response_model=TelegramLinkResponse)
-async def create_telegram_link(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """Одноразовый код (10 минут) для привязки Telegram: отправьте боту /link КОД."""
-    code, ttl = await TelegramLinkService.create_code(db, current_user)
-    username = getattr(settings, "TELEGRAM_BOT_USERNAME", "")
-    deep_link = f"https://t.me/{username}?start={code}" if username else None
-    return TelegramLinkResponse(code=code, expires_in=ttl, deep_link=deep_link)
+@router.post("/telegram-link", response_model=MessageResponse)
+async def complete_telegram_link(
+    payload: TelegramLinkComplete,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Привязать Telegram по одноразовому коду, полученному командой /link в боте."""
+    user = await TelegramLinkService.consume(db, payload.code, current_user)
+    if user is None:
+        raise HTTPException(status_code=400, detail="Код неверный или истёк. Получите новый в Telegram-боте.")
+    return MessageResponse(message="Telegram успешно привязан")
 
 
 @router.delete("/telegram-link", response_model=MessageResponse)

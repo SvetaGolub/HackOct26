@@ -104,13 +104,15 @@ def _apply(sync_conn) -> None:
                 """
                 CREATE TABLE telegram_link_codes (
                     id INT NOT NULL AUTO_INCREMENT,
-                    user_id INT NOT NULL,
+                    user_id INT NULL,
+                    telegram_id BIGINT NULL,
                     code_hash VARCHAR(64) NOT NULL,
                     expires_at DATETIME NOT NULL,
                     created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                     PRIMARY KEY (id),
                     UNIQUE KEY uq_telegram_link_codes_code_hash (code_hash),
                     KEY ix_telegram_link_codes_user_id (user_id),
+                    KEY ix_telegram_link_codes_telegram_id (telegram_id),
                     CONSTRAINT fk_telegram_link_codes_user_id_users
                         FOREIGN KEY (user_id) REFERENCES users (id)
                         ON DELETE CASCADE
@@ -118,6 +120,30 @@ def _apply(sync_conn) -> None:
                 """
             )
         )
+    else:
+        link_cols = {
+            c["name"]: c for c in inspect(sync_conn).get_columns("telegram_link_codes")
+        }
+        legacy_codes = (
+            "telegram_id" not in link_cols
+            or ("user_id" in link_cols and not link_cols["user_id"]["nullable"])
+        )
+        if "telegram_id" not in link_cols:
+            logger.warning("schema_compat: add telegram_link_codes.telegram_id")
+            sync_conn.execute(
+                text("ALTER TABLE telegram_link_codes ADD COLUMN telegram_id BIGINT NULL")
+            )
+            sync_conn.execute(
+                text("ALTER TABLE telegram_link_codes ADD KEY ix_telegram_link_codes_telegram_id (telegram_id)")
+            )
+        if "user_id" in link_cols and not link_cols["user_id"]["nullable"]:
+            logger.warning("schema_compat: allow null telegram_link_codes.user_id")
+            sync_conn.execute(
+                text("ALTER TABLE telegram_link_codes MODIFY COLUMN user_id INT NULL")
+            )
+        if legacy_codes:
+            # Old website-issued codes belong to the reverse flow and must not be reused.
+            sync_conn.execute(text("DELETE FROM telegram_link_codes"))
 
 
 async def ensure_schema_compat(engine: AsyncEngine) -> None:

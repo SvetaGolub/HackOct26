@@ -9,6 +9,8 @@ from app.db.models import TelegramLinkCode, User
 from app.db.services.audit_service import AuditService
 
 CODE_TTL_MINUTES = 10
+CODE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+CODE_LENGTH = 10
 
 
 def _hash(code: str) -> str:
@@ -22,32 +24,34 @@ def _utcnow() -> datetime:
 
 class TelegramLinkService:
     @classmethod
-    async def create_code(cls, db: AsyncSession, user: User) -> tuple[str, int]:
-        """Выдаёт новый код (старые коды пользователя и просроченные удаляются)."""
+    async def create_code(cls, db: AsyncSession, telegram_id: int) -> tuple[str, int]:
+        """Выдаёт код для Telegram-аккаунта; предыдущие и просроченные коды удаляются."""
         now = _utcnow()
         await db.execute(delete(TelegramLinkCode).where(
-            or_(TelegramLinkCode.user_id == user.id, TelegramLinkCode.expires_at < now)
+            or_(TelegramLinkCode.telegram_id == telegram_id, TelegramLinkCode.expires_at < now)
         ))
-        code = secrets.token_urlsafe(6)  # 8 символов [A-Za-z0-9_-]: подходит для deep link
+        code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
         db.add(TelegramLinkCode(
-            user_id=user.id, code_hash=_hash(code), expires_at=now + timedelta(minutes=CODE_TTL_MINUTES)
+            telegram_id=telegram_id,
+            code_hash=_hash(code),
+            expires_at=now + timedelta(minutes=CODE_TTL_MINUTES),
         ))
         await db.commit()
         return code, CODE_TTL_MINUTES * 60
 
     @classmethod
-    async def consume(cls, db: AsyncSession, code: str, telegram_id: int) -> User | None:
-        """Привязывает Telegram к владельцу кода. Код одноразовый. None: код неверный или истёк."""
+    async def consume(cls, db: AsyncSession, code: str, user: User) -> User | None:
+        """Привязывает владельца кода к авторизованному пользователю. Код одноразовый."""
         row = (await db.execute(
             select(TelegramLinkCode).where(TelegramLinkCode.code_hash == _hash(code)).with_for_update()
         )).scalar_one_or_none()
         if row is None:
             return None
 
+        telegram_id = row.telegram_id
         expired = row.expires_at < _utcnow()
-        user = await db.get(User, row.user_id)
         await db.delete(row)  # код сгорает в любом случае
-        if expired or user is None:
+        if expired or telegram_id is None or user.id is None:
             await db.commit()
             return None
 
