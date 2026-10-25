@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Авторизация — Invoice Keeper</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="script.js"></script>
+</head>
+<body class="auth-page" x-data="invoiceKeeperApp('auth')" :data-theme="theme">
+
+  <header class="app-header">
+    <div class="header-left">
+      <span class="brand-logo"><img src="logo-light.png" alt="aeza" class="brand-logo-img logo-for-light"><img src="logo.png" alt="aeza" class="brand-logo-img logo-for-dark"></span>
+      <span class="header-divider"></span>
+      <span class="system-subtitle">Invoice Keeper • Авторизация</span>
+    </div>
+
+    <div class="header-right">
+      <button type="button" class="theme-toggle-fixed" @click="toggleTheme()" title="Переключить тему">
+        <span class="theme-circle"></span>
+        <span class="theme-text" x-text="theme === 'light' ? 'Темная' : 'Светлая'"></span>
+      </button>
+    </div>
+  </header>
+
+  <main class="auth-page-wrapper">
+    <div class="auth-card">
+      <div class="auth-card-header">
+        <span class="brand-logo"><img src="logo-light.png" alt="aeza" class="brand-logo-img logo-for-light"><img src="logo.png" alt="aeza" class="brand-logo-img logo-for-dark"></span>
+        <span class="system-subtitle">Вход в панель управления платежами</span>
+      </div>
+
+      <form @submit.prevent="submitLoginPage()" class="modal-form">
+        <div class="form-field">
+          <label for="login">Логин</label>
+          <input id="login" name="login" type="text" class="field-input" required autocomplete="username" x-model="loginForm.login" placeholder="Введите логин">
+        </div>
+
+        <div class="form-field">
+          <label for="loginPassword">Пароль</label>
+          <input id="loginPassword" type="password" class="field-input" required x-model="loginForm.password" placeholder="Введите пароль">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; height: 36px; margin-top: 6px;">
+          Войти в систему
+        </button>
+      </form>
+    </div>
+  </main>
+
+</body>
+</html>

@@ -35,8 +35,8 @@
 
       <form @submit.prevent="submitLoginPage()" class="modal-form">
         <div class="form-field">
-          <label for="loginEmail">Email</label>
-          <input id="loginEmail" type="email" class="field-input" required x-model="loginForm.email" placeholder="user@gmail.com">
+          <label for="login">Логин</label>
+          <input id="login" name="login" type="text" class="field-input" required autocomplete="username" x-model="loginForm.login" placeholder="Введите логин">
         </div>
 
         <div class="form-field">

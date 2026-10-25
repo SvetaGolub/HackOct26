@@ -344,16 +344,16 @@
 
       <form @submit.prevent="submitAddAccount()" class="modal-form">
         <div class="form-field">
-          <label>Email аккаунта</label>
-          <input type="email" class="field-input" required x-model="addAccForm.email" placeholder="user@gmail.com">
+          <label for="newUserLogin">Логин пользователя</label>
+          <input id="newUserLogin" name="login" type="text" class="field-input" required minlength="3" maxlength="255" autocomplete="off" x-model="addAccForm.login" placeholder="Введите логин">
         </div>
         <div class="form-field">
-          <label>Пароль</label>
-          <input type="password" class="field-input" required x-model="addAccForm.password" placeholder="Введите пароль">
+          <label for="newUserPassword">Пароль пользователя</label>
+          <input id="newUserPassword" name="password" type="password" class="field-input" required minlength="6" maxlength="128" autocomplete="new-password" x-model="addAccForm.password" placeholder="Задайте пароль">
         </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" @click="isAddAccountModalOpen = false">Отмена</button>
-          <button type="submit" class="btn btn-primary">Подключить</button>
+          <button type="submit" class="btn btn-primary">Создать пользователя</button>
         </div>
       </form>
     </div>

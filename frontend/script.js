@@ -105,8 +105,8 @@ function invoiceKeeperApp(pageRole = 'admin') {
     pendingReceipt: null,
     isAccountMenuOpen: false,
     isAddAccountModalOpen: false,
-    addAccForm: { login: '', email: '', password: '' },
-    loginForm: { login: '', email: '', password: '' },
+    addAccForm: { login: '', password: '' },
+    loginForm: { login: '', password: '' },
     accounts: [],
     currentUser: null,
     records: [],
@@ -491,7 +491,7 @@ function invoiceKeeperApp(pageRole = 'admin') {
     },
 
     async submitLoginPage() {
-      const login = (this.loginForm.login || this.loginForm.email || '').trim();
+      const login = this.loginForm.login.trim();
       const password = this.loginForm.password;
       if (!login || !password) return;
       try {
@@ -510,7 +510,6 @@ function invoiceKeeperApp(pageRole = 'admin') {
       if (!this.isAdmin) return;
       this.isAccountMenuOpen = false;
       this.addAccForm.login = '';
-      this.addAccForm.email = '';
       this.addAccForm.password = '';
       this.isAddAccountModalOpen = true;
     },
@@ -519,7 +518,7 @@ function invoiceKeeperApp(pageRole = 'admin') {
       if (!this.isAdmin) return;
       try {
         await this.apiRequest('/users', 'POST', {
-          login: (this.addAccForm.login || this.addAccForm.email || '').trim(),
+          login: this.addAccForm.login.trim(),
           password: this.addAccForm.password
         });
         this.isAddAccountModalOpen = false;
