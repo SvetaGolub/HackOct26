@@ -16,7 +16,9 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 COPY app ./app
+COPY alembic.ini ./alembic.ini
+COPY migrations ./migrations
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "alembic upgrade head && python -m app.main"]
+CMD ["sh", "-c", "python -m alembic upgrade head && python -m app.main"]
