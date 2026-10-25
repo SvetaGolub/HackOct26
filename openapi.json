@@ -101,12 +101,65 @@
         ]
       }
     },
+    "/api/v1/auth/telegram-link": {
+      "post": {
+        "tags": [
+          "Авторизация"
+        ],
+        "summary": "Create Telegram Link",
+        "description": "Одноразовый код (10 минут) для привязки Telegram: отправьте боту /link КОД.",
+        "operationId": "create_telegram_link_api_v1_auth_telegram_link_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramLinkResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Авторизация"
+        ],
+        "summary": "Unlink Telegram",
+        "description": "Отвязать Telegram от аккаунта.",
+        "operationId": "unlink_telegram_api_v1_auth_telegram_link_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/recurring-payments": {
       "get": {
         "tags": [
           "Платежи"
         ],
         "summary": "List Recurring",
+        "description": "Общий список регулярных платежей.",
         "operationId": "list_recurring_api_v1_recurring_payments_get",
         "security": [
           {
@@ -180,6 +233,7 @@
           "Платежи"
         ],
         "summary": "Create Recurring",
+        "description": "Создание регулярного платежа (только администратор).",
         "operationId": "create_recurring_api_v1_recurring_payments_post",
         "security": [
           {
@@ -221,6 +275,62 @@
       }
     },
     "/api/v1/recurring-payments/{recurring_id}": {
+      "patch": {
+        "tags": [
+          "Платежи"
+        ],
+        "summary": "Update Recurring",
+        "description": "Изменение шаблона платежа и будущих неоплаченных периодов (только администратор).",
+        "operationId": "update_recurring_api_v1_recurring_payments__recurring_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "recurring_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Recurring Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecurringPaymentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecurringPaymentData"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "delete": {
         "tags": [
           "Платежи"
@@ -247,6 +357,54 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recurring-payments/{recurring_id}/restore": {
+      "post": {
+        "tags": [
+          "Платежи"
+        ],
+        "summary": "Restore Recurring",
+        "description": "Восстановление остановленного регулярного платежа (только администратор).",
+        "operationId": "restore_recurring_api_v1_recurring_payments__recurring_id__restore_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "recurring_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Recurring Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecurringPaymentData"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -478,6 +636,53 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OccurrenceData"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payment-occurrences/{occurrence_id}/receipt": {
+      "get": {
+        "tags": [
+          "Платежи"
+        ],
+        "summary": "Get Occurrence Receipt",
+        "operationId": "get_occurrence_receipt_api_v1_payment_occurrences__occurrence_id__receipt_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "occurrence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Occurrence Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptData"
                 }
               }
             }
@@ -751,17 +956,16 @@
             "schema": {
               "anyOf": [
                 {
-                  "type": "string",
-                  "description": "auth, recurring_payment, payment_occurrence, user"
+                  "type": "string"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "description": "recurring_payment, payment_occurrence, user",
+              "description": "auth, recurring_payment, payment_occurrence, user",
               "title": "Entity Type"
             },
-            "description": "recurring_payment, payment_occurrence, user"
+            "description": "auth, recurring_payment, payment_occurrence, user"
           },
           {
             "name": "entity_id",
@@ -881,21 +1085,70 @@
         }
       }
     },
-    "/api/v1/auth/telegram-link": {
+    "/api/v1/feedback": {
       "post": {
         "tags": [
-          "Авторизация"
+          "Обратная связь"
         ],
-        "summary": "Create Telegram Link",
-        "description": "Одноразовый код (10 минут) для привязки Telegram: отправьте боту /link КОД.",
-        "operationId": "create_telegram_link_api_v1_auth_telegram_link_post",
+        "summary": "Submit Feedback",
+        "operationId": "submit_feedback_api_v1_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/departments": {
+      "get": {
+        "tags": [
+          "Отделы"
+        ],
+        "summary": "List Departments",
+        "operationId": "list_departments_api_v1_departments_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TelegramLinkResponse"
+                  "items": {
+                    "$ref": "#/components/schemas/DepartmentData"
+                  },
+                  "type": "array",
+                  "title": "Response List Departments Api V1 Departments Get"
                 }
               }
             }
@@ -907,20 +1160,39 @@
           }
         ]
       },
-      "delete": {
+      "post": {
         "tags": [
-          "Авторизация"
+          "Отделы"
         ],
-        "summary": "Unlink Telegram",
-        "description": "Отвязать Telegram от аккаунта.",
-        "operationId": "unlink_telegram_api_v1_auth_telegram_link_delete",
+        "summary": "Create Department",
+        "operationId": "create_department_api_v1_departments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepartmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
-          "200": {
+          "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MessageResponse"
+                  "$ref": "#/components/schemas/DepartmentData"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -931,6 +1203,46 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/api/v1/departments/{department_id}": {
+      "delete": {
+        "tags": [
+          "Отделы"
+        ],
+        "summary": "Delete Department",
+        "operationId": "delete_department_api_v1_departments__department_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "department_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Department Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -989,11 +1301,6 @@
             ],
             "title": "Actor Id"
           },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
           "actor_login": {
             "anyOf": [
               {
@@ -1004,6 +1311,11 @@
               }
             ],
             "title": "Actor Login"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
           }
         },
         "type": "object",
@@ -1045,8 +1357,8 @@
       "Currency": {
         "type": "string",
         "enum": [
-          "USD",
           "RUB",
+          "USD",
           "EUR"
         ],
         "title": "Currency"
@@ -1082,6 +1394,109 @@
         "title": "CurrencySummary",
         "description": "Итоги по одной валюте (без конвертации).\n\npaid: сумма оплаченных периодов; unpaid: сумма неоплаченных;\noverdue: сумма неоплаченных периодов со сроком в прошлом."
       },
+      "DepartmentCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "DepartmentCreate"
+      },
+      "DepartmentData": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "DepartmentData"
+      },
+      "FeedbackCreate": {
+        "properties": {
+          "employee": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Employee"
+          },
+          "department": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Department"
+          },
+          "request": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Request"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "$ref": "#/components/schemas/Currency"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Due Date"
+          },
+          "periodicity": {
+            "$ref": "#/components/schemas/Periodicity"
+          },
+          "interval_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 36500.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "employee",
+          "department",
+          "request",
+          "amount",
+          "currency",
+          "due_date",
+          "periodicity"
+        ],
+        "title": "FeedbackCreate"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1114,6 +1529,27 @@
         "title": "LogoutResponse",
         "description": "Ответ при выходе из системы."
       },
+      "MessageResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "description": "Флаг успешности запроса",
+            "default": true
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Сообщение"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "MessageResponse",
+        "description": "Простой успешный ответ (например, после удаления)."
+      },
       "OccurrenceData": {
         "properties": {
           "id": {
@@ -1135,6 +1571,28 @@
           },
           "currency": {
             "$ref": "#/components/schemas/Currency"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "employee": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee"
           },
           "period": {
             "type": "string",
@@ -1170,6 +1628,22 @@
           "overdue": {
             "type": "boolean",
             "title": "Overdue"
+          },
+          "receipt_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Name"
+          },
+          "reminder_sent": {
+            "type": "boolean",
+            "title": "Reminder Sent",
+            "default": false
           }
         },
         "type": "object",
@@ -1223,20 +1697,66 @@
             ],
             "title": "Paid Date",
             "description": "Фактическая дата оплаты (по умолчанию сегодня)"
+          },
+          "receipt_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Name"
+          },
+          "receipt_data_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2800000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Data Url"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "title": "OccurrenceUpdate",
-        "description": "PATCH /payment-occurrences/{id}.\n\n- is_paid / paid_date: отметка оплаты и исправление фактической даты\n  (пользователь и администратор; срок при этом не меняется)."
+        "description": "PATCH /payment-occurrences/{id}.\n\nis_paid / paid_date: отметка оплаты, её отмена и исправление фактической даты\n(user и admin; срок при этом не меняется)."
       },
       "Periodicity": {
         "type": "string",
         "enum": [
           "monthly",
-          "one_time"
+          "one_time",
+          "daily",
+          "weekly",
+          "yearly",
+          "custom"
         ],
         "title": "Periodicity"
+      },
+      "ReceiptData": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "data_url": {
+            "type": "string",
+            "title": "Data Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "data_url"
+        ],
+        "title": "ReceiptData"
       },
       "RecurringPaymentCreate": {
         "properties": {
@@ -1271,8 +1791,46 @@
           "periodicity": {
             "$ref": "#/components/schemas/Periodicity",
             "default": "monthly"
+          },
+          "interval_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 36500.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Days"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "employee": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "title",
@@ -1303,10 +1861,43 @@
           "periodicity": {
             "$ref": "#/components/schemas/Periodicity"
           },
+          "interval_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Days"
+          },
           "first_due_date": {
             "type": "string",
             "format": "date",
             "title": "First Due Date"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "employee": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee"
           },
           "is_active": {
             "type": "boolean",
@@ -1343,8 +1934,152 @@
         ],
         "title": "RecurringPaymentData"
       },
+      "RecurringPaymentUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Currency"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "first_due_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Due Date"
+          },
+          "periodicity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Periodicity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "interval_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 36500.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Days"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "employee": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Employee"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RecurringPaymentUpdate"
+      },
+      "TelegramLinkResponse": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Код: отправьте боту /start КОД или /link КОД"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In",
+            "description": "Время жизни кода, секунды"
+          },
+          "deep_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deep Link",
+            "description": "Ссылка t.me (если задан TELEGRAM_BOT_USERNAME)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "expires_in"
+        ],
+        "title": "TelegramLinkResponse",
+        "description": "Одноразовый код для привязки Telegram."
+      },
       "UserCreate": {
         "properties": {
+          "login": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 3,
+            "title": "Login"
+          },
           "password": {
             "type": "string",
             "maxLength": 128,
@@ -1363,12 +2098,6 @@
               }
             ],
             "title": "Full Name"
-          },
-          "login": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 255,
-            "title": "Login"
           },
           "telegram_id": {
             "anyOf": [
@@ -1397,6 +2126,10 @@
             "type": "integer",
             "title": "Id"
           },
+          "login": {
+            "type": "string",
+            "title": "Login"
+          },
           "full_name": {
             "type": "string",
             "title": "Full Name"
@@ -1408,10 +2141,6 @@
             "type": "boolean",
             "title": "Is System",
             "default": false
-          },
-          "login": {
-            "type": "string",
-            "title": "Login"
           },
           "telegram_id": {
             "anyOf": [
@@ -1438,6 +2167,8 @@
         "properties": {
           "login": {
             "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
             "title": "Login",
             "description": "Логин"
           },
@@ -1467,6 +2198,19 @@
       },
       "UserUpdate": {
         "properties": {
+          "login": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Login"
+          },
           "password": {
             "anyOf": [
               {
@@ -1492,19 +2236,6 @@
               }
             ],
             "title": "Full Name"
-          },
-          "login": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 3,
-                "maxLength": 255
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Login"
           },
           "telegram_id": {
             "anyOf": [
@@ -1562,60 +2293,6 @@
           "type"
         ],
         "title": "ValidationError"
-      },
-      "TelegramLinkResponse": {
-        "properties": {
-          "code": {
-            "type": "string",
-            "title": "Code",
-            "description": "Код: отправьте боту /start КОД или /link КОД"
-          },
-          "expires_in": {
-            "type": "integer",
-            "title": "Expires In",
-            "description": "Время жизни кода, секунды"
-          },
-          "deep_link": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Deep Link",
-            "description": "Ссылка t.me (если задан TELEGRAM_BOT_USERNAME)"
-          }
-        },
-        "type": "object",
-        "required": [
-          "code",
-          "expires_in"
-        ],
-        "title": "TelegramLinkResponse",
-        "description": "Одноразовый код для привязки Telegram."
-      },
-      "MessageResponse": {
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "title": "Success",
-            "description": "Флаг успешности запроса",
-            "default": true
-          },
-          "message": {
-            "type": "string",
-            "title": "Message",
-            "description": "Сообщение"
-          }
-        },
-        "type": "object",
-        "required": [
-          "message"
-        ],
-        "title": "MessageResponse",
-        "description": "Простой успешный ответ (например, после удаления)."
       }
     },
     "securitySchemes": {

@@ -3,9 +3,10 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Numeric, String,
+    Boolean, CheckConstraint, Date, DateTime, ForeignKey, Index, Numeric, String, Text,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -51,6 +52,10 @@ class PaymentOccurrence(Base):
     paid_date: Mapped[date | None] = mapped_column(Date, nullable=True)  # при отмене NULL
     paid_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    receipt_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    receipt_data_url: Mapped[str | None] = mapped_column(
+        Text().with_variant(MEDIUMTEXT(), "mysql"), nullable=True
     )
 
     created_at: Mapped[datetime] = mapped_column(

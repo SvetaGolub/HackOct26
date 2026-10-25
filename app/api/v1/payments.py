@@ -7,8 +7,8 @@ from app.api.deps import get_current_user
 from app.db.models import User
 from app.db.models.enum import Currency
 from app.db.schemas import (
-    CurrencySummary, OccurrenceData, OccurrenceStatusFilter, OccurrenceUpdate,
-    RecurringPaymentCreate, RecurringPaymentData,
+    CurrencySummary, OccurrenceData, OccurrenceStatusFilter, OccurrenceUpdate, ReceiptData,
+    RecurringPaymentCreate, RecurringPaymentData, RecurringPaymentUpdate,
 )
 from app.db.services import PaymentService
 from app.db.session import get_db
@@ -36,6 +36,15 @@ async def create_recurring(
     return await PaymentService.create_recurring(db, data, user)
 
 
+@router.patch("/recurring-payments/{recurring_id}", response_model=RecurringPaymentData)
+async def update_recurring(
+    recurring_id: int, data: RecurringPaymentUpdate,
+    db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user),
+):
+    """Изменение шаблона платежа и будущих неоплаченных периодов (только администратор)."""
+    return await PaymentService.update_recurring(db, recurring_id, data, user)
+
+
 @router.delete("/recurring-payments/{recurring_id}", status_code=204)
 async def delete_recurring(
     recurring_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)
@@ -43,6 +52,14 @@ async def delete_recurring(
     """Прекращение платежа и его напоминаний с сохранением истории (только админ)."""
     await PaymentService.delete_recurring(db, recurring_id, user)
     return Response(status_code=204)
+
+
+@router.post("/recurring-payments/{recurring_id}/restore", response_model=RecurringPaymentData)
+async def restore_recurring(
+    recurring_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)
+):
+    """Восстановление остановленного регулярного платежа (только администратор)."""
+    return await PaymentService.restore_recurring(db, recurring_id, user)
 
 
 @router.get("/payment-occurrences", response_model=list[OccurrenceData])
@@ -67,6 +84,13 @@ async def get_occurrence(
     occurrence_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)
 ):
     return await PaymentService.get_occurrence(db, occurrence_id, user)
+
+
+@router.get("/payment-occurrences/{occurrence_id}/receipt", response_model=ReceiptData)
+async def get_occurrence_receipt(
+    occurrence_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)
+):
+    return await PaymentService.get_receipt(db, occurrence_id, user)
 
 
 @router.patch("/payment-occurrences/{occurrence_id}", response_model=OccurrenceData)

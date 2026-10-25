@@ -1,3 +1,5 @@
+import base64
+import binascii
 from datetime import date
 from decimal import Decimal
 
@@ -6,11 +8,11 @@ from sqlalchemy import and_, case, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.db.models import PaymentOccurrence, RecurringPayment, User
+from app.db.models import PaymentOccurrence, RecurringPayment, ReminderLog, User
 from app.db.models.enum import Currency, UserRole
 from app.db.schemas import (
     CurrencySummary, OccurrenceData, OccurrenceStatusFilter, OccurrenceUpdate,
-    RecurringPaymentCreate,
+    RecurringPaymentCreate, RecurringPaymentUpdate,
 )
 from app.db.schemas.access import not_found, require_roles
 from app.db.services.audit_service import AuditService
@@ -38,6 +40,7 @@ class PaymentService:
             amount=payload.amount,
             currency=payload.currency,
             periodicity=payload.periodicity,
+            interval_days=payload.interval_days,
             first_due_date=payload.first_due_date,
             anchor_day=payload.first_due_date.day,
             department=payload.department,
@@ -53,6 +56,58 @@ class PaymentService:
                  "periodicity": rp.periodicity, "first_due_date": rp.first_due_date,
                  "department": rp.department, "employee": rp.employee},
         )
+        await db.commit()
+        await db.refresh(rp)
+        return rp
+
+    @classmethod
+    async def update_recurring(
+        cls, db: AsyncSession, recurring_id: int, payload: RecurringPaymentUpdate, actor: User
+    ) -> RecurringPayment:
+        require_roles(actor, UserRole.ADMIN)
+        rp = (await db.execute(
+            select(RecurringPayment).where(RecurringPayment.id == recurring_id).with_for_update()
+        )).scalar_one_or_none()
+        if rp is None:
+            raise not_found("Регулярный платёж не найден")
+        if not rp.is_active:
+            raise HTTPException(status_code=409, detail="Нельзя изменить прекращённый платёж")
+
+        fields = payload.model_dump(exclude_unset=True)
+        old = {key: getattr(rp, key) for key in fields}
+        for key, value in fields.items():
+            setattr(rp, key, value.strip() if isinstance(value, str) and key in {"title", "department", "employee"} else value)
+        if "first_due_date" in fields:
+            rp.anchor_day = rp.first_due_date.day
+        if rp.periodicity.value == "custom" and not rp.interval_days:
+            raise HTTPException(status_code=422, detail="Для пользовательской периодичности укажите интервал в днях")
+        if rp.periodicity.value != "custom":
+            rp.interval_days = None
+
+        today = today_local()
+        future = list((await db.execute(
+            select(PaymentOccurrence)
+            .where(
+                PaymentOccurrence.recurring_payment_id == rp.id,
+                PaymentOccurrence.is_paid.is_(False),
+                PaymentOccurrence.due_date >= today,
+            )
+            .with_for_update()
+        )).scalars().all())
+        for occurrence in future:
+            await db.delete(occurrence)
+
+        AuditService.record(
+            db, entity_type="recurring_payment", entity_id=rp.id, action="update", actor=actor,
+            old=old, new=fields,
+        )
+        if rp.periodicity.value != "one_time" or not await db.scalar(
+            select(PaymentOccurrence.id).where(
+                PaymentOccurrence.recurring_payment_id == rp.id,
+                PaymentOccurrence.is_paid.is_(True),
+            ).limit(1)
+        ):
+            await ensure_occurrences(db, rp, today, start_due_date=rp.first_due_date)
         await db.commit()
         await db.refresh(rp)
         return rp
@@ -100,6 +155,28 @@ class PaymentService:
         )
         await db.commit()
 
+    @classmethod
+    async def restore_recurring(cls, db: AsyncSession, recurring_id: int, actor: User) -> RecurringPayment:
+        require_roles(actor, UserRole.ADMIN)
+        rp = (await db.execute(
+            select(RecurringPayment).where(RecurringPayment.id == recurring_id).with_for_update()
+        )).scalar_one_or_none()
+        if rp is None:
+            raise not_found("Регулярный платёж не найден")
+        if rp.is_active:
+            raise HTTPException(status_code=409, detail="Платёж уже активен")
+
+        rp.is_active = True
+        rp.deleted_at = None
+        await ensure_occurrences(db, rp)
+        AuditService.record(
+            db, entity_type="recurring_payment", entity_id=rp.id, action="restore", actor=actor,
+            old={"is_active": False}, new={"is_active": True},
+        )
+        await db.commit()
+        await db.refresh(rp)
+        return rp
+
     # ---------- периоды оплаты ----------
 
     @classmethod
@@ -114,7 +191,10 @@ class PaymentService:
     ) -> list[OccurrenceData]:
         today = today_local()
         O = PaymentOccurrence
-        stmt = select(O)
+        personal_reminder_sent = select(ReminderLog.id).where(
+            ReminderLog.occurrence_id == O.id
+        ).exists()
+        stmt = select(O, personal_reminder_sent.label("personal_reminder_sent"))
         if status == OccurrenceStatusFilter.PAID:
             stmt = stmt.where(O.is_paid.is_(True))
         elif status == OccurrenceStatusFilter.UNPAID:
@@ -128,8 +208,11 @@ class PaymentService:
         if date_to:
             stmt = stmt.where(O.due_date <= date_to)
         stmt = stmt.order_by(O.due_date.asc(), O.id.asc()).limit(limit).offset(offset)
-        rows = (await db.execute(stmt)).scalars().all()
-        return [OccurrenceData.build(o, today) for o in rows]
+        rows = (await db.execute(stmt)).all()
+        return [
+            OccurrenceData.build(occurrence, today, personal_sent)
+            for occurrence, personal_sent in rows
+        ]
 
     @staticmethod
     async def _load_occurrence(db: AsyncSession, occurrence_id: int, for_update: bool = False):
@@ -148,7 +231,17 @@ class PaymentService:
     @classmethod
     async def get_occurrence(cls, db: AsyncSession, occurrence_id: int, actor: User) -> OccurrenceData:
         occ = await cls._load_occurrence(db, occurrence_id)
-        return OccurrenceData.build(occ, today_local())
+        personal_sent = await db.scalar(
+            select(ReminderLog.id).where(ReminderLog.occurrence_id == occurrence_id).limit(1)
+        )
+        return OccurrenceData.build(occ, today_local(), personal_sent is not None)
+
+    @classmethod
+    async def get_receipt(cls, db: AsyncSession, occurrence_id: int, actor: User) -> dict[str, str]:
+        occ = await cls._load_occurrence(db, occurrence_id)
+        if not occ.receipt_name or not occ.receipt_data_url:
+            raise not_found("Чек не найден")
+        return {"name": occ.receipt_name, "data_url": occ.receipt_data_url}
 
     @classmethod
     async def update_occurrence(
@@ -187,10 +280,51 @@ class PaymentService:
                 occ.paid_date = new_date  # срок не меняется, просрочка пересчитывается сама
                 changed = True
 
+        if "receipt_data_url" in payload.model_fields_set:
+            if payload.receipt_data_url is None:
+                previous_receipt_name = occ.receipt_name
+                had_receipt = occ.receipt_data_url is not None
+                occ.receipt_data_url = None
+                occ.receipt_name = None
+                if had_receipt:
+                    AuditService.record(
+                        db, entity_type="payment_occurrence", entity_id=occ.id,
+                        action="remove_receipt", actor=actor,
+                        old={"receipt_name": previous_receipt_name},
+                    )
+            else:
+                encoded = payload.receipt_data_url.partition(",")[2]
+                try:
+                    content = base64.b64decode(encoded, validate=True)
+                except (binascii.Error, ValueError) as exc:
+                    raise HTTPException(status_code=422, detail="Файл чека повреждён") from exc
+                if not content or len(content) > 2 * 1024 * 1024:
+                    raise HTTPException(status_code=413, detail="Размер файла должен быть не больше 2 МБ")
+                mime = payload.receipt_data_url.split(";", 1)[0][5:]
+                signatures = {
+                    "image/png": content.startswith(b"\x89PNG\r\n\x1a\n"),
+                    "image/jpeg": content.startswith(b"\xff\xd8\xff"),
+                    "image/webp": content.startswith(b"RIFF") and content[8:12] == b"WEBP",
+                    "application/pdf": content.startswith(b"%PDF-"),
+                }
+                if not signatures.get(mime, False):
+                    raise HTTPException(status_code=422, detail="Содержимое файла не соответствует его формату")
+                occ.receipt_data_url = payload.receipt_data_url
+                occ.receipt_name = payload.receipt_name
+                AuditService.record(
+                    db, entity_type="payment_occurrence", entity_id=occ.id,
+                    action="attach_receipt", actor=actor,
+                    new={"receipt_name": occ.receipt_name},
+                )
+            changed = True
+
         if changed:
             await db.commit()
             await db.refresh(occ)
-        return OccurrenceData.build(occ, today)
+        personal_sent = await db.scalar(
+            select(ReminderLog.id).where(ReminderLog.occurrence_id == occ.id).limit(1)
+        )
+        return OccurrenceData.build(occ, today, personal_sent is not None)
 
     # ---------- итоги ----------
 

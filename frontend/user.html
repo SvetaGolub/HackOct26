@@ -91,8 +91,13 @@
             </div>
           </div>
 
-          <button type="button" class="dropdown-item-btn" x-show="isAdmin" @click="openAddAccountModal()">
+          <button type="button" class="dropdown-item-btn" @click="openAddAccountModal()">
             <span>+ Добавить аккаунт</span>
+          </button>
+
+          <button type="button" class="dropdown-item-btn" @click="switchAccount()">
+            <span>⇄ Сменить аккаунт</span>
+            <span class="accounts-count-pill" x-text="accounts.length + ' акк.'"></span>
           </button>
 
           <button type="button" class="dropdown-item-btn danger" @click="logoutAccount()">
@@ -105,15 +110,15 @@
 
   <!-- ОСНОВНАЯ СЕТКА -->
   <main class="dashboard-layout">
-
+    
     <section class="primary-column">
-
+      
       <!-- КАЛЕНДАРЬ НА 2 НЕДЕЛИ -->
       <div class="card calendar-card">
         <div class="card-header">
           <div class="calendar-title-wrap">
             <span class="section-title">Календарь</span>
-            <span class="period-label" x-text="periodLabel"></span>
+            <button type="button" class="period-label period-label-btn" @click="openFullCalendar()" title="Открыть полный календарь" x-text="periodLabel"></button>
           </div>
           <div class="calendar-arrows">
             <button type="button" class="arrow-btn" @click="shiftWeeks(-14)" title="Предыдущие 2 недели">←</button>
@@ -165,7 +170,7 @@
         <div class="card-header">
           <div>
             <span class="section-title">Реестр периодических платежей</span>
-            <span class="sub-hint">Срок оплаты и фактическая дата оплаты</span>
+            <span class="sub-hint">Дата создания, срок оплаты и фактическая дата оплаты</span>
           </div>
           <span class="counter-badge" x-text="'Записей: ' + filteredTableRecords.length"></span>
         </div>
@@ -193,7 +198,6 @@
                 <option value="">Все статусы</option>
                 <option value="Одобрено">Одобрено (Оплачено)</option>
                 <option value="В ожидании">В ожидании (Не оплачено)</option>
-                <option value="Отказано" disabled>Просрочено</option>
                 <option value="Отказано">Отказано / Просрочка</option>
               </select>
             </div>
@@ -222,10 +226,12 @@
             </thead>
             <tbody>
               <template x-for="item in filteredTableRecords" :key="item.id">
-                <tr :class="statusColor(item) + (!item.isDeleted && item.status === 'В ожидании' && isOverdue(item) ? ' overdue-payment' : '')">
+                <tr class="row-clickable" :class="statusColor(item) + (!item.isDeleted && item.status === 'В ожидании' && isOverdue(item) ? ' overdue-payment' : '')" title="Кликните, чтобы открыть платеж"
+                    @click="if (!$event.target.closest('.status-control-group')) openEditModal(item)">
                   <td>
                     <div class="desc-main" x-text="item.description"></div>
                     <div class="desc-meta">
+                      <span class="created-date-tag" x-text="'Добавлена: ' + (item.createdAt || '24.08.2026')"></span>
                       <span x-text="item.periodicity"></span>
                       <span class="overdue-tag" x-show="!item.isDeleted && isOverdue(item)">ПРОСРОЧКА</span>
                       <span class="ontime-tag" x-show="!item.isDeleted && item.status === 'Одобрено' && !isOverdue(item)">ВОВРЕМЯ</span>
@@ -242,24 +248,29 @@
                         <select class="status-select" x-model="item.status" @change="onStatusChange(item)" style="flex: 1;">
                           <option value="Одобрено">Одобрено (Оплачено)</option>
                           <option value="В ожидании">В ожидании (Не оплачено)</option>
+                          <option value="Отказано">Отказано</option>
                         </select>
                       </div>
 
                       <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px; font-size: 11px;">
                         <span style="color: var(--text-muted);" x-text="'Срок: ' + formatReadableDate(item.dueDate)"></span>
-
+                        
                         <!-- Фактическая дата оплаты -->
                         <div class="actual-payment-dropdown-wrap" x-data="{ open: false }" @click.outside="open = false">
                           <button type="button" class="actual-payment-trigger" @click="open = !open">
                             <span x-text="item.paidAt ? 'Факт: ' + formatReadableDate(item.paidAt) : 'Фактич. оплата ▼'"></span>
                           </button>
-
+                          
                           <div class="actual-payment-dropdown" x-show="open" x-transition style="display: none;">
                             <label>Введите дату оплаты или выберите её в календаре:</label>
                             <input type="date" class="field-input" lang="ru" x-model="item.paidAt" title="Введите дату с клавиатуры или выберите её в календаре" @change="onActualDateChange(item); open = false;">
                             <button type="button" class="btn btn-secondary" style="height: 26px; font-size: 10px; margin-top: 2px;" @click="item.paidAt = ''; onActualDateChange(item); open = false;">Очистить дату</button>
                           </div>
                         </div>
+                        <label class="actual-payment-trigger receipt-upload-trigger" :class="{ 'has-receipt': item.receiptUrl }" :title="item.receiptUrl ? 'Чек: ' + item.receiptUrl : 'Добавить чек'">
+                          <span x-text="item.receiptUrl ? '📎 Чек' : '📎 Добавить чек'"></span>
+                          <input type="file" accept="image/*,.pdf" @change="handleRecordFileUpload($event, item)">
+                        </label>
                       </div>
 
                     </div>
@@ -283,10 +294,10 @@
         <!-- Поисковая строка с выдвигающимся прямоугольником фильтра -->
         <div class="journal-search-box">
           <input type="text" placeholder="Поиск по истории изменений..." x-model="journalSearch">
-
+          
           <div class="journal-filter-wrapper" @click.outside="isHistoryFilterOpen = false">
             <button type="button" class="journal-filter-btn" @click="isHistoryFilterOpen = !isHistoryFilterOpen" x-text="journalStatusFilter || 'фильтр'"></button>
-
+            
             <!-- Выдвигающийся прямоугольник фильтра -->
             <div class="journal-filter-dropdown" x-show="isHistoryFilterOpen" x-transition style="display: none;">
               <button type="button" class="filter-dropdown-item" :class="{ 'active': !journalStatusFilter }" @click="setHistoryFilter('')">Все статусы</button>
@@ -333,8 +344,8 @@
 
       <form @submit.prevent="submitAddAccount()" class="modal-form">
         <div class="form-field">
-          <label>Логин аккаунта</label>
-          <input type="text" class="field-input" required minlength="3" autocomplete="username" x-model="addAccForm.login" placeholder="Логин пользователя">
+          <label>Email аккаунта</label>
+          <input type="email" class="field-input" required x-model="addAccForm.email" placeholder="user@gmail.com">
         </div>
         <div class="form-field">
           <label>Пароль</label>
@@ -352,12 +363,12 @@
   <div class="modal-overlay" x-show="isModalOpen" style="display: none;" @click.self="isModalOpen = false">
     <div class="modal-window">
       <div class="modal-header">
-        <h3 class="modal-title" x-text="isAdmin ? 'Управление платежами на дату' : 'Платежи на дату'"></h3>
+        <h3 class="modal-title" x-text="editingId !== null ? 'Редактирование платежа' : (isAdmin ? 'Управление платежами на дату' : 'Платежи на дату')"></h3>
         <button type="button" class="modal-close" @click="isModalOpen = false">×</button>
       </div>
 
       <!-- Список записей на выбранную дату (Салатовые/Оранжево-желтые/Красные/Серые) -->
-      <div class="day-records-section">
+      <div class="day-records-section" x-show="editingId === null">
         <div class="sub-label" x-text="'Записи на дату ' + formatReadableDate(selectedDateISO) + ':'"></div>
         <template x-if="getRecordsByDate(selectedDateISO).length === 0">
           <div class="empty-day-notice">На выбранную дату записей нет</div>
@@ -374,6 +385,9 @@
                   <span class="day-record-amount" x-text="formatMoney(rec.amount, rec.currency)"></span>
                 </div>
                 <div style="font-size: 11px; opacity: 0.9; margin-top: 2px;" x-text="rec.description + ' • (' + rec.periodicity + ')'"></div>
+                <a x-show="rec.receiptDataUrl" :href="rec.receiptDataUrl" :download="rec.receiptUrl" target="_blank" rel="noopener" style="display: block; font-size: 10px; opacity: 0.8; margin-top: 1px;" x-text="'Открыть чек: ' + rec.receiptUrl"></a>
+                <div style="font-size: 10px; opacity: 0.8; margin-top: 1px;" x-show="rec.receiptUrl && !rec.receiptDataUrl" x-text="'Файл: ' + rec.receiptUrl"></div>
+                <div style="font-size: 10px; font-weight: 700; margin-top: 2px;" x-show="rec.isDeleted" style="color: #6c757d;">[УДАЛЕНО (Видно админу)]</div>
               </div>
               <!-- Удалять платежи может только администратор -->
               <template x-if="isAdmin">
@@ -387,20 +401,30 @@
       <!-- Форма создания платежа — ТОЛЬКО для администратора -->
       <template x-if="isAdmin">
         <div>
-      <hr class="modal-divider">
+      <hr class="modal-divider" x-show="editingId === null">
 
-      <!-- Форма добавления нового платежа и управления отделами -->
-      <form @submit.prevent="createRecord()" class="modal-form">
+      <!-- Форма добавления нового платежа со скрепкой и управлением отделами -->
+      <form @submit.prevent="editingId !== null ? saveEditedRecord() : createRecord()" class="modal-form">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div class="sub-label sub-label-blue" style="margin-bottom: 0;">Добавить регулярный платеж:</div>
+          <div class="sub-label sub-label-blue" style="margin-bottom: 0;" x-text="editingId !== null ? 'Редактировать платеж:' : 'Добавить регулярный платеж:'"></div>
+          
+          <!-- Скрепка для прикрепления файла -->
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label title="Прикрепить файл (чек/документ)" style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--link-blue); background: var(--bg-subtle); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border-color);">
+              <span>📎</span>
+              <span x-text="newRec.receiptUrl ? 'Файл прикреплен' : 'Прикрепить файл'"></span>
+              <input type="file" style="display: none;" @change="handleFileUpload($event)">
+            </label>
+            <span x-show="newRec.receiptUrl" style="font-size: 10px; color: var(--text-muted); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" x-text="newRec.receiptUrl"></span>
+          </div>
         </div>
-
+        
         <div class="form-row-2">
           <div class="form-field">
             <label>Дата платежа (срок)</label>
             <input type="date" class="field-input" lang="ru" required x-model="selectedDateISO" title="Измените дату платежа при необходимости">
           </div>
-
+          
           <div class="form-field">
             <label>Отдел</label>
             <div class="dept-row">
@@ -416,6 +440,11 @@
                     <button type="button" class="dept-menu-item" :class="{ 'active': d === newRec.department }"
                             @click="newRec.department = d; isDeptMenuOpen = false" x-text="d"></button>
                   </template>
+                  <!-- Удаление отдела: левая кнопка мыши по прямоугольнику «Удалить» -->
+                  <button type="button" class="dept-delete-rect" x-show="departments.length > 1"
+                          @click="$event.button === 0 && removeDepartment(newRec.department)">
+                    Удалить «<span x-text="newRec.department"></span>»
+                  </button>
                 </div>
               </div>
 
@@ -460,9 +489,18 @@
           <div class="form-field">
             <label>Периодичность</label>
             <select class="field-select" x-model="newRec.periodicity">
-              <option value="monthly">Ежемесячно</option>
-              <option value="one_time">Разовый платёж</option>
+              <option value="Ежемесячно">Ежемесячно</option>
+              <option value="Еженедельно">Еженедельно</option>
+              <option value="Ежегодно">Ежегодно</option>
+              <option value="Ежедневно">Ежедневно</option>
+              <option value="Кастомная">Раз в X дней</option>
             </select>
+          </div>
+
+          <!-- Поле для ввода N дней, если выбрана Кастомная периодичность -->
+          <div class="form-field" x-show="newRec.periodicity === 'Кастомная'">
+            <label>Каждые (x дней)</label>
+            <input type="number" class="field-input" min="1" x-model="customPeriodDays" placeholder="7">
           </div>
 
           <div class="form-field">
@@ -470,6 +508,7 @@
             <select class="field-select" x-model="newRec.status">
               <option value="В ожидании">В ожидании (Не оплачено)</option>
               <option value="Одобрено">Одобрено (Оплачено)</option>
+              <option value="Отказано">Отказано</option>
             </select>
           </div>
           <div class="form-field">
@@ -479,8 +518,8 @@
         </div>
 
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" @click="isModalOpen = false">Закрыть</button>
-          <button type="submit" class="btn btn-primary">Создать запись</button>
+          <button type="button" class="btn btn-secondary" @click="isModalOpen = false" x-text="editingId !== null ? 'Отмена' : 'Закрыть'"></button>
+          <button type="submit" class="btn btn-primary" x-text="editingId !== null ? 'Сохранить изменения' : 'Создать запись'"></button>
         </div>
       </form>
         </div>
@@ -529,7 +568,7 @@
             <div class="form-field">
               <label>Платеж</label>
               <div class="amount-currency-row">
-                <input type="number" class="field-input" required min="0.01" step="0.01" x-model="feedbackForm.amount" placeholder="Сумма">
+                <input type="number" class="field-input" required min="0" step="0.01" x-model="feedbackForm.amount" placeholder="Сумма">
                 <select class="field-select" x-model="feedbackForm.currency">
                   <option value="RUB">RUB (₽)</option>
                   <option value="USD">USD ($)</option>
@@ -547,9 +586,16 @@
             <div class="form-field">
               <label>Периодичность</label>
               <select class="field-select" x-model="feedbackForm.periodicity">
-                <option value="monthly">Ежемесячно</option>
-                <option value="one_time">Разовый платёж</option>
+                <option value="Ежемесячно">Ежемесячно</option>
+                <option value="Еженедельно">Еженедельно</option>
+                <option value="Ежегодно">Ежегодно</option>
+                <option value="Ежедневно">Ежедневно</option>
+                <option value="Кастомная">Раз в X дней</option>
               </select>
+            </div>
+            <div class="form-field" x-show="feedbackForm.periodicity === 'Кастомная'">
+              <label>Каждые (x дней)</label>
+              <input type="number" class="field-input" min="1" x-model="feedbackForm.customDays" placeholder="7">
             </div>
           </div>
 
@@ -574,17 +620,67 @@
         <div class="tg-linked-note" x-show="telegramLinked">
           Подключен аккаунт <strong x-text="'@' + telegramLogin"></strong>
         </div>
-        <div class="tg-linked-note" x-show="telegramLinkDetails">
-          Отправьте боту команду <strong x-text="'/link ' + (telegramLinkDetails?.code || '')"></strong>.
-          <a x-show="telegramLinkDetails?.deep_link" :href="telegramLinkDetails?.deep_link" target="_blank" rel="noopener">Открыть бота</a>
-          <span x-text="telegramLinkDetails ? 'Код действует ' + Math.ceil(telegramLinkDetails.expires_in / 60) + ' мин.' : ''"></span>
+        <div class="form-field">
+          <label>Логин в Telegram</label>
+          <input type="text" class="field-input" required x-model="telegramForm.login" placeholder="@username" autocomplete="off">
+        </div>
+        <div class="form-field">
+          <label>Код</label>
+          <input type="text" class="field-input" required x-model="telegramForm.code" placeholder="Код из Telegram-бота" autocomplete="off">
         </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-delete-tg" x-show="telegramLinked" @click="disconnectTelegram()">Отключить</button>
           <button type="button" class="btn btn-secondary" @click="isTelegramModalOpen = false">Отмена</button>
-          <button type="submit" class="btn btn-primary" x-show="!telegramLinked">Сгенерировать код</button>
+          <button type="submit" class="btn btn-primary">Подключить</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ПОЛНОЦЕННЫЙ КАЛЕНДАРЬ (по клику на период) -->
+  <div class="modal-overlay" x-show="isFullCalendarOpen" style="display: none;" @click.self="isFullCalendarOpen = false" @keydown.escape.window="isFullCalendarOpen = false">
+    <div class="modal-window full-calendar-modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Календарь</h3>
+        <button type="button" class="modal-close" @click="isFullCalendarOpen = false">×</button>
+      </div>
+
+      <!-- Ввод даты: день, месяц, год -->
+      <form class="jump-row" @submit.prevent="applyDateJump()">
+        <input type="number" class="field-input" min="1" max="31" placeholder="День" x-model.number="jump.day" title="День">
+        <select class="field-select" x-model.number="jump.month" title="Месяц">
+          <template x-for="(m, i) in monthNames" :key="i">
+            <option :value="i + 1" x-text="m"></option>
+          </template>
+        </select>
+        <input type="number" class="field-input" min="1970" max="2100" placeholder="Год" x-model.number="jump.year" title="Год">
+        <button type="submit" class="btn btn-primary">Перейти</button>
+      </form>
+
+      <div class="fullcal-nav">
+        <button type="button" class="arrow-btn" @click="shiftCalMonth(-12)" title="Год назад">«</button>
+        <button type="button" class="arrow-btn" @click="shiftCalMonth(-1)" title="Предыдущий месяц">←</button>
+        <div class="fullcal-title" x-text="monthNames[calMonth] + ' ' + calYear"></div>
+        <button type="button" class="arrow-btn" @click="shiftCalMonth(1)" title="Следующий месяц">→</button>
+        <button type="button" class="arrow-btn" @click="shiftCalMonth(12)" title="Год вперёд">»</button>
+      </div>
+
+      <div class="fullcal-weekdays">
+        <template x-for="(dn, idx) in weekdays" :key="idx">
+          <div :class="{ 'weekend': idx >= 5 }" x-text="dn"></div>
+        </template>
+      </div>
+
+      <div class="fullcal-grid">
+        <template x-for="(cell, idx) in fullCalendarCells" :key="idx">
+          <button type="button" class="fullcal-day"
+                  :class="{ 'empty': !cell, 'today': cell && cell.iso === referenceTodayISO, 'in-range': cell && cell.inRange, 'weekend': cell && cell.weekend }"
+                  :disabled="!cell" @click="cell && pickCalendarDate(cell.iso)">
+            <span x-text="cell ? cell.day : ''"></span>
+            <i class="fullcal-dot" x-show="cell && cell.count > 0"></i>
+          </button>
+        </template>
+      </div>
     </div>
   </div>
 

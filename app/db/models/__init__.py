@@ -7,6 +7,7 @@ from app.db.models.reminder_log import ReminderLog
 from app.db.models.audit_log import AuditLog
 from app.db.models.telegram_link_code import TelegramLinkCode
 from app.db.models.auth_session import AuthSession
+from app.db.models.department import Department
 
 __all__ = [
     "User",
@@ -16,4 +17,5 @@ __all__ = [
     "AuditLog",
     "TelegramLinkCode",
     "AuthSession",
+    "Department",
 ]

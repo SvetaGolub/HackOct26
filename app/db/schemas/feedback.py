@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.db.models.enum import Currency, Periodicity
 
@@ -14,3 +14,12 @@ class FeedbackCreate(BaseModel):
     currency: Currency
     due_date: date
     periodicity: Periodicity
+    interval_days: int | None = Field(default=None, ge=1, le=36500)
+
+    @model_validator(mode="after")
+    def _validate_interval(self):
+        if self.periodicity == Periodicity.CUSTOM and self.interval_days is None:
+            raise ValueError("Для пользовательской периодичности укажите интервал в днях")
+        if self.periodicity != Periodicity.CUSTOM and self.interval_days is not None:
+            raise ValueError("Интервал в днях допустим только для пользовательской периодичности")
+        return self

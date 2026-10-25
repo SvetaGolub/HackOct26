@@ -32,6 +32,7 @@ class RecurringPayment(Base):
     periodicity: Mapped[Periodicity] = mapped_column(
         str_enum(Periodicity), default=Periodicity.MONTHLY, nullable=False
     )
+    interval_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Ближайшая дата оплаты и "якорный" день месяца: нет такого числа -> последний
     # день месяца, а после 28 февраля возвращаемся на 31 марта.

@@ -10,6 +10,10 @@ class Currency(str, Enum):
 class Periodicity(str, Enum):
     MONTHLY = "monthly"      # обязательная часть ТЗ
     ONE_TIME = "one_time"    # доп. возможность: ровно один период
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    YEARLY = "yearly"
+    CUSTOM = "custom"
 
 
 class UserRole(str, Enum):

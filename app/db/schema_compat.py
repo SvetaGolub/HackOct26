@@ -58,6 +58,16 @@ def _apply(sync_conn) -> None:
                     "ADD COLUMN chat_notified_at DATETIME(6) NULL"
                 )
             )
+        if "receipt_name" not in occ_cols:
+            logger.warning("schema_compat: add payment_occurrences.receipt_name")
+            sync_conn.execute(
+                text("ALTER TABLE payment_occurrences ADD COLUMN receipt_name VARCHAR(255) NULL")
+            )
+        if "receipt_data_url" not in occ_cols:
+            logger.warning("schema_compat: add payment_occurrences.receipt_data_url")
+            sync_conn.execute(
+                text("ALTER TABLE payment_occurrences ADD COLUMN receipt_data_url MEDIUMTEXT NULL")
+            )
 
     # d4 оставил reminder_logs.chat_id; модели ждут user_id
     if "reminder_logs" in tables:
