@@ -9,12 +9,12 @@
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="script.js"></script>
 </head>
-<body x-data="invoiceKeeperApp('user')" :data-theme="theme">
+<body class="user-page" x-data="invoiceKeeperApp('user')" :data-theme="theme">
 
   <!-- ВЕРХНЯЯ ШАПКА -->
   <header class="app-header">
     <div class="header-left">
-      <a href="admin.html" class="brand-logo"><img src="logo-light.jpg" alt="aeza" class="brand-logo-img logo-for-light"><img src="logo.jpg" alt="aeza" class="brand-logo-img logo-for-dark"></a>
+      <a href="admin.html" class="brand-logo"><img src="logo-light.png" alt="aeza" class="brand-logo-img logo-for-light"><img src="logo.png" alt="aeza" class="brand-logo-img logo-for-dark"></a>
       <span class="header-divider"></span>
       <span class="system-subtitle">Invoice Keeper • Регулярные платежи</span>
       <span class="role-badge" x-text="currentAccount.label || 'Пользователь'"></span>
@@ -34,7 +34,7 @@
       <div class="budget-divider"></div>
       <div class="budget-item">
         <span class="budget-label">Валюта:</span>
-        <select class="budget-currency-select" x-model="planCurrency">
+        <select class="budget-currency-select" :class="'currency-' + planCurrency.toLowerCase()" x-model="planCurrency">
           <option value="RUB">RUB (₽)</option>
           <option value="USD">USD ($)</option>
           <option value="EUR">EUR (€)</option>
@@ -61,7 +61,7 @@
       <!-- Подключить Telegram — у всех пользователей -->
       <button type="button" class="btn btn-telegram" :class="{ 'linked': telegramLinked }" @click="openTelegramModal()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 3.3 2.7 10.6c-1 .4-1 1.8.1 2.1l4.6 1.4 1.8 5.6c.3.9 1.4 1.1 2 .4l2.6-2.6 4.7 3.5c.8.6 1.9.1 2.1-.9L23 4.6c.2-1-.7-1.7-1.5-1.3Zm-3.8 4.6-8.6 7.8-.3 3.1-1.3-4.2 10.2-6.7Z"/></svg>
-        <span x-text="telegramLinked ? 'Telegram подключен' : 'Подключить Telegram'"></span>
+        <span x-text="telegramLinked ? 'Telegram: @' + telegramLogin : 'Подключить Telegram'"></span>
       </button>
 
       <!-- ЗНАЧОК АККАУНТА С ВЫДВИГАЮЩИМСЯ ПРЯМОУГОЛЬНИКОМ -->
@@ -91,6 +91,10 @@
             </div>
           </div>
 
+          <button type="button" class="dropdown-item-btn" x-show="isAdmin" @click="openAddAccountModal()">
+            <span>+ Добавить аккаунт</span>
+          </button>
+
           <button type="button" class="dropdown-item-btn danger" @click="logoutAccount()">
             <span>Выход</span>
           </button>
@@ -108,7 +112,7 @@
       <div class="card calendar-card">
         <div class="card-header">
           <div class="calendar-title-wrap">
-            <span class="section-title">Календарь оплат (2 недели)</span>
+            <span class="section-title">Календарь</span>
             <span class="period-label" x-text="periodLabel"></span>
           </div>
           <div class="calendar-arrows">
@@ -161,7 +165,7 @@
         <div class="card-header">
           <div>
             <span class="section-title">Реестр периодических платежей</span>
-            <span class="sub-hint">Отображается дата создания, срок оплаты и фактическая оплата через выпадающий прямоугольник</span>
+            <span class="sub-hint">Срок оплаты и фактическая дата оплаты</span>
           </div>
           <span class="counter-badge" x-text="'Записей: ' + filteredTableRecords.length"></span>
         </div>
@@ -189,7 +193,8 @@
                 <option value="">Все статусы</option>
                 <option value="Одобрено">Одобрено (Оплачено)</option>
                 <option value="В ожидании">В ожидании (Не оплачено)</option>
-                <option value="Отказано">Просрочка</option>
+                <option value="Отказано" disabled>Просрочено</option>
+                <option value="Отказано">Отказано / Просрочка</option>
               </select>
             </div>
             <div>
@@ -217,11 +222,10 @@
             </thead>
             <tbody>
               <template x-for="item in filteredTableRecords" :key="item.id">
-                <tr>
+                <tr :class="statusColor(item) + (!item.isDeleted && item.status === 'В ожидании' && isOverdue(item) ? ' overdue-payment' : '')">
                   <td>
                     <div class="desc-main" x-text="item.description"></div>
                     <div class="desc-meta">
-                      <span class="created-date-tag" x-text="'Добавлена: ' + (item.createdAt || '24.08.2026')"></span>
                       <span x-text="item.periodicity"></span>
                       <span class="overdue-tag" x-show="!item.isDeleted && isOverdue(item)">ПРОСРОЧКА</span>
                       <span class="ontime-tag" x-show="!item.isDeleted && item.status === 'Одобрено' && !isOverdue(item)">ВОВРЕМЯ</span>
@@ -235,7 +239,7 @@
                     <div class="status-control-group">
                       <div style="display: flex; gap: 6px; align-items: center;">
                         <!-- Статус -->
-                        <select class="status-select" :class="statusColor(item)" x-model="item.status" @change="onStatusChange(item)" style="flex: 1;">
+                        <select class="status-select" x-model="item.status" @change="onStatusChange(item)" style="flex: 1;">
                           <option value="Одобрено">Одобрено (Оплачено)</option>
                           <option value="В ожидании">В ожидании (Не оплачено)</option>
                         </select>
@@ -244,15 +248,15 @@
                       <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px; font-size: 11px;">
                         <span style="color: var(--text-muted);" x-text="'Срок: ' + formatReadableDate(item.dueDate)"></span>
 
-                        <!-- Фактическая оплата - выпадающий прямоугольник -->
+                        <!-- Фактическая дата оплаты -->
                         <div class="actual-payment-dropdown-wrap" x-data="{ open: false }" @click.outside="open = false">
                           <button type="button" class="actual-payment-trigger" @click="open = !open">
                             <span x-text="item.paidAt ? 'Факт: ' + formatReadableDate(item.paidAt) : 'Фактич. оплата ▼'"></span>
                           </button>
 
                           <div class="actual-payment-dropdown" x-show="open" x-transition style="display: none;">
-                            <label>Указать факт. дату оплаты:</label>
-                            <input type="date" class="field-input" x-model="item.paidAt" @change="onActualDateChange(item); open = false;">
+                            <label>Введите дату оплаты или выберите её в календаре:</label>
+                            <input type="date" class="field-input" lang="ru" x-model="item.paidAt" title="Введите дату с клавиатуры или выберите её в календаре" @change="onActualDateChange(item); open = false;">
                             <button type="button" class="btn btn-secondary" style="height: 26px; font-size: 10px; margin-top: 2px;" @click="item.paidAt = ''; onActualDateChange(item); open = false;">Очистить дату</button>
                           </div>
                         </div>
@@ -273,8 +277,8 @@
     <!-- ПРАВАЯ КОЛОНКА: ИСТОРИЯ ПЛАТЕЖЕЙ -->
     <aside class="sidebar-column">
       <div class="journal-panel">
-        <h2 class="journal-heading" x-text="isAdmin ? 'История платежей' : 'Список платежей'"></h2>
-        <div class="journal-subheading" x-text="isAdmin ? 'Журнал всех изменений по платежам' : 'Текущее состояние платежей'"></div>
+        <h2 class="journal-heading">История платежей</h2>
+        <div class="journal-subheading">Журнал всех изменений по платежам</div>
 
         <!-- Поисковая строка с выдвигающимся прямоугольником фильтра -->
         <div class="journal-search-box">
@@ -330,7 +334,7 @@
       <form @submit.prevent="submitAddAccount()" class="modal-form">
         <div class="form-field">
           <label>Логин аккаунта</label>
-          <input type="text" class="field-input" required minlength="3" x-model="addAccForm.login" placeholder="Логин пользователя">
+          <input type="text" class="field-input" required minlength="3" autocomplete="username" x-model="addAccForm.login" placeholder="Логин пользователя">
         </div>
         <div class="form-field">
           <label>Пароль</label>
@@ -361,13 +365,15 @@
         <ul class="day-records-list">
           <template x-for="rec in getRecordsByDate(selectedDateISO)" :key="rec.id">
             <li class="day-record-item-card" :class="statusColor(rec)">
-              <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <strong x-text="rec.department + ' — ' + rec.employee"></strong>
-                  <span style="font-size: 11px; font-weight: 600;" x-text="formatMoney(rec.amount, rec.currency)"></span>
+              <div class="day-record-content" style="flex: 1;">
+                <div class="day-record-item-heading">
+                  <div class="day-record-person">
+                    <strong x-text="rec.department"></strong>
+                    <span x-text="rec.employee"></span>
+                  </div>
+                  <span class="day-record-amount" x-text="formatMoney(rec.amount, rec.currency)"></span>
                 </div>
                 <div style="font-size: 11px; opacity: 0.9; margin-top: 2px;" x-text="rec.description + ' • (' + rec.periodicity + ')'"></div>
-                <div style="font-size: 10px; font-weight: 700; margin-top: 2px;" x-show="rec.isDeleted" style="color: #6c757d;">[УДАЛЕНО (Видно админу)]</div>
               </div>
               <!-- Удалять платежи может только администратор -->
               <template x-if="isAdmin">
@@ -383,7 +389,7 @@
         <div>
       <hr class="modal-divider">
 
-      <!-- Форма создания регулярного платежа -->
+      <!-- Форма добавления нового платежа и управления отделами -->
       <form @submit.prevent="createRecord()" class="modal-form">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div class="sub-label sub-label-blue" style="margin-bottom: 0;">Добавить регулярный платеж:</div>
@@ -392,7 +398,7 @@
         <div class="form-row-2">
           <div class="form-field">
             <label>Дата платежа (срок)</label>
-            <input type="date" class="field-input" required x-model="selectedDateISO" title="Измените дату платежа при необходимости">
+            <input type="date" class="field-input" lang="ru" required x-model="selectedDateISO" title="Измените дату платежа при необходимости">
           </div>
 
           <div class="form-field">
@@ -410,7 +416,6 @@
                     <button type="button" class="dept-menu-item" :class="{ 'active': d === newRec.department }"
                             @click="newRec.department = d; isDeptMenuOpen = false" x-text="d"></button>
                   </template>
-                  <!-- Удаление отдела: левая кнопка мыши по прямоугольнику «Удалить» -->
                 </div>
               </div>
 
@@ -469,7 +474,7 @@
           </div>
           <div class="form-field">
             <label>Факт. дата оплаты</label>
-            <input type="date" class="field-input" x-model="newRec.paidAt">
+            <input type="date" class="field-input" lang="ru" x-model="newRec.paidAt">
           </div>
         </div>
 
@@ -534,7 +539,7 @@
             </div>
             <div class="form-field">
               <label>До какого числа</label>
-              <input type="date" class="field-input" required x-model="feedbackForm.dueDate">
+              <input type="date" class="field-input" lang="ru" required x-model="feedbackForm.dueDate">
             </div>
           </div>
 
@@ -566,7 +571,9 @@
       </div>
 
       <form @submit.prevent="submitTelegram()" class="modal-form">
-        <div class="tg-linked-note" x-show="telegramLinked">Telegram уже привязан к вашему аккаунту.</div>
+        <div class="tg-linked-note" x-show="telegramLinked">
+          Подключен аккаунт <strong x-text="'@' + telegramLogin"></strong>
+        </div>
         <div class="tg-linked-note" x-show="telegramLinkDetails">
           Отправьте боту команду <strong x-text="'/link ' + (telegramLinkDetails?.code || '')"></strong>.
           <a x-show="telegramLinkDetails?.deep_link" :href="telegramLinkDetails?.deep_link" target="_blank" rel="noopener">Открыть бота</a>
@@ -622,7 +629,7 @@
     </div>
     <div class="footer-bottom-bar">
       <div class="footer-brand-keys">
-        <img src="logo.jpg" alt="aeza" class="footer-logo-img">
+        <img src="logo.png" alt="aeza" class="footer-logo-img">
       </div>
       <div class="footer-copy">© 2026 EZ Infrastructure Limited</div>
       <div class="footer-pay-methods">RUB • USD • EUR</div>

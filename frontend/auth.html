@@ -9,11 +9,11 @@
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="script.js"></script>
 </head>
-<body x-data="invoiceKeeperApp('auth')" :data-theme="theme">
+<body class="auth-page" x-data="invoiceKeeperApp('auth')" :data-theme="theme">
 
   <header class="app-header">
     <div class="header-left">
-      <span class="brand-logo"><img src="logo-light.jpg" alt="aeza" class="brand-logo-img logo-for-light"><img src="logo.jpg" alt="aeza" class="brand-logo-img logo-for-dark"></span>
+      <span class="brand-logo"><img src="logo-light.png" alt="aeza" class="brand-logo-img logo-for-light"><img src="logo.png" alt="aeza" class="brand-logo-img logo-for-dark"></span>
       <span class="header-divider"></span>
       <span class="system-subtitle">Invoice Keeper • Авторизация</span>
     </div>
@@ -29,7 +29,7 @@
   <main class="auth-page-wrapper">
     <div class="auth-card">
       <div class="auth-card-header">
-        <span class="brand-logo"><img src="logo-light.jpg" alt="aeza" class="brand-logo-img logo-for-light"><img src="logo.jpg" alt="aeza" class="brand-logo-img logo-for-dark"></span>
+        <span class="brand-logo"><img src="logo-light.png" alt="aeza" class="brand-logo-img logo-for-light"><img src="logo.png" alt="aeza" class="brand-logo-img logo-for-dark"></span>
         <span class="system-subtitle">Вход в панель управления платежами</span>
       </div>
 
@@ -41,7 +41,7 @@
 
         <div class="form-field">
           <label for="loginPassword">Пароль</label>
-          <input id="loginPassword" type="password" class="field-input" required autocomplete="current-password" x-model="loginForm.password" placeholder="Введите пароль">
+          <input id="loginPassword" type="password" class="field-input" required x-model="loginForm.password" placeholder="Введите пароль">
         </div>
 
         <button type="submit" class="btn btn-primary" style="width: 100%; height: 36px; margin-top: 6px;">
