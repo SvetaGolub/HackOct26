@@ -1,3 +1,6 @@
+from typing import Literal
+
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,8 +25,9 @@ class Settings(BaseSettings):
     # JWT
     JWT_SECRET: str = "change-me-in-production"
     JWT_SECRET_KEY: str | None = None  # Алиас для совместимости
-    JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    JWT_ALGORITHM: Literal["HS256"] = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, gt=0, le=60)
+    API_DOCS_ENABLED: bool = False
 
     @property
     def jwt_secret_key(self) -> str:
@@ -50,7 +54,7 @@ class Settings(BaseSettings):
 
     # Admin
     ADMIN_LOGIN: str = "admin"
-    ADMIN_PASSWORD: str = "change-me"
+    ADMIN_PASSWORD: str = Field(min_length=12)
 
     # CORS
     CORS_ORIGINS: str = "http://localhost:8000"
@@ -58,7 +62,21 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         """Список разрешенных CORS origin."""
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+
+    @model_validator(mode="after")
+    def validate_security_settings(self):
+        if "change-me" in self.DATABASE_URL.lower():
+            raise ValueError("Set a unique DATABASE_URL password")
+        if len(self.jwt_secret_key.encode("utf-8")) < 32:
+            raise ValueError("JWT_SECRET_KEY must contain at least 32 bytes")
+        if self.jwt_secret_key == "change-me-in-production":
+            raise ValueError("Set a unique JWT_SECRET_KEY")
+        if self.ADMIN_PASSWORD.strip().lower() in {"change-me", "password", "admin"}:
+            raise ValueError("Set a unique ADMIN_PASSWORD")
+        if "*" in self.cors_origins_list:
+            raise ValueError("CORS_ORIGINS must list trusted origins, not '*'")
+        return self
 
 
 # Глобальный экземпляр настроек

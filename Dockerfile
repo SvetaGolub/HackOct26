@@ -6,6 +6,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+RUN addgroup --system app && adduser --system --ingroup app app
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends tzdata \
     && rm -rf /var/lib/apt/lists/*
@@ -18,6 +20,9 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY app ./app
 COPY alembic.ini ./alembic.ini
 COPY migrations ./migrations
+RUN chown -R app:app /app
+
+USER app
 
 EXPOSE 8000
 

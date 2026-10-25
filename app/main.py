@@ -107,7 +107,7 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url=None,
     redoc_url=None,
-    openapi_url="/api/v1/openapi.json",
+    openapi_url="/api/v1/openapi.json" if settings.API_DOCS_ENABLED else None,
 )
 
 app.add_middleware(
@@ -122,9 +122,10 @@ for r in (auth_router, payments_router, users_router, audit_log_router, feedback
     app.include_router(r, prefix="/api/v1")
 
 
-@app.get("/api/v1/docs", include_in_schema=False)
-async def swagger_ui():
-    return get_swagger_ui_html(openapi_url=app.openapi_url, title=app.title + " - Swagger UI")
+if settings.API_DOCS_ENABLED:
+    @app.get("/api/v1/docs", include_in_schema=False)
+    async def swagger_ui():
+        return get_swagger_ui_html(openapi_url=app.openapi_url, title=app.title + " - Swagger UI")
 
 
 setup_admin(app, engine)

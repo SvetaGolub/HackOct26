@@ -21,7 +21,7 @@ async def _headers(client, login, password):
     return {"Authorization": f"Bearer {response.json()['accessToken']}"}
 
 
-def test_protected_data_and_openapi_acceptance_endpoints(acceptance_db):
+def test_protected_data_and_private_api_documentation(acceptance_db):
     async def scenario():
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
@@ -40,25 +40,8 @@ def test_protected_data_and_openapi_acceptance_endpoints(acceptance_db):
 
             docs = await client.get("/api/v1/docs")
             spec_response = await client.get("/api/v1/openapi.json")
-            assert docs.status_code == 200
-            assert spec_response.status_code == 200
-
-            paths = spec_response.json()["paths"]
-            required = {
-                "/api/v1/auth/login",
-                "/api/v1/auth/me",
-                "/api/v1/auth/logout",
-                "/api/v1/recurring-payments",
-                "/api/v1/payment-occurrences",
-                "/api/v1/payment-occurrences/{occurrence_id}",
-                "/api/v1/payments/summary",
-                "/api/v1/users",
-            }
-            assert required <= paths.keys()
-            assert "post" in paths["/api/v1/recurring-payments"]
-            assert "delete" in paths["/api/v1/recurring-payments/{recurring_id}"]
-            assert "patch" in paths["/api/v1/payment-occurrences/{occurrence_id}"]
-            assert "get" in paths["/api/v1/payments/summary"]
+            assert docs.status_code == 404
+            assert spec_response.status_code == 404
 
     asyncio.run(scenario())
 
